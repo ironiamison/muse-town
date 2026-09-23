@@ -32,6 +32,7 @@ type IsometricTownProps = {
   selectedMuse: IsoMuse | null;
   questDistrictId: string | null;
   claimTotal: number;
+  arrivalCount: number;
   onSelectDistrict: (id: string) => void;
   onSelectMuse: (muse: IsoMuse) => void;
 };
@@ -323,6 +324,11 @@ function drawBuilding(
       fountainY - 37 * zoom,
     );
     context.stroke();
+    context.fillStyle = "#effff7";
+    context.font = `800 ${Math.max(7, 9 * zoom)}px "Instrument Serif", Georgia, serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("M", point.x, fountainY - 6 * zoom);
     return;
   }
 
@@ -394,7 +400,7 @@ function drawBuilding(
     context.font = `700 ${Math.max(7, 8 * zoom)}px ui-monospace`;
     context.textAlign = "center";
     context.fillText(
-      claimTotal > 0 ? `$${Math.round(claimTotal)}+ CLAIMS` : "MARKET BOARD",
+      claimTotal > 0 ? `$${Math.round(claimTotal)}+ CLAIMS` : "PUBLIC RECEIPTS",
       point.x,
       roofY - 28 * zoom,
     );
@@ -447,6 +453,117 @@ function drawBuilding(
     point.y - 35 * zoom,
     zoom,
     district.kind === "school" ? "#9cf2cd" : "#ffe38e",
+  );
+
+  const emblem =
+    district.kind === "workshop"
+      ? "⌁"
+      : district.kind === "market"
+        ? "$"
+        : district.kind === "hall"
+          ? "✓"
+          : "+";
+  context.fillStyle = "rgba(7,24,29,.86)";
+  context.beginPath();
+  context.arc(point.x, point.y - 45 * zoom, 10 * zoom, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = district.color;
+  context.lineWidth = Math.max(1, zoom);
+  context.stroke();
+  context.fillStyle = "#f3fff9";
+  context.font = `800 ${Math.max(7, 9 * zoom)}px ui-monospace`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(emblem, point.x, point.y - 45 * zoom);
+}
+
+function drawArrivalGate(
+  context: CanvasRenderingContext2D,
+  point: Point,
+  zoom: number,
+  count: number,
+  time: number,
+) {
+  const pulse = 0.45 + Math.sin(time * 0.004) * 0.12;
+  context.fillStyle = `rgba(101, 224, 207, ${pulse * 0.25})`;
+  context.beginPath();
+  context.ellipse(
+    point.x,
+    point.y + 5 * zoom,
+    48 * zoom,
+    20 * zoom,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  context.fill();
+  context.strokeStyle = "#59d8ca";
+  context.lineWidth = 2 * zoom;
+  context.beginPath();
+  context.ellipse(
+    point.x,
+    point.y + 3 * zoom,
+    36 * zoom,
+    14 * zoom,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  context.stroke();
+
+  [-1, 1].forEach((side) => {
+    context.fillStyle = "#253f44";
+    context.fillRect(
+      point.x + side * 40 * zoom - 5 * zoom,
+      point.y - 70 * zoom,
+      10 * zoom,
+      72 * zoom,
+    );
+    context.fillStyle = side < 0 ? "#ff9569" : "#5bd6ca";
+    polygon(
+      context,
+      [
+        {
+          x: point.x + side * 40 * zoom,
+          y: point.y - 67 * zoom,
+        },
+        {
+          x: point.x + side * 66 * zoom,
+          y: point.y - 56 * zoom,
+        },
+        {
+          x: point.x + side * 40 * zoom,
+          y: point.y - 46 * zoom,
+        },
+      ],
+      side < 0 ? "#ff9569" : "#5bd6ca",
+    );
+  });
+  context.fillStyle = "#102c32";
+  context.fillRect(
+    point.x - 48 * zoom,
+    point.y - 88 * zoom,
+    96 * zoom,
+    37 * zoom,
+  );
+  context.strokeStyle = "rgba(207,250,239,.55)";
+  context.strokeRect(
+    point.x - 48 * zoom,
+    point.y - 88 * zoom,
+    96 * zoom,
+    37 * zoom,
+  );
+  context.fillStyle = "#effff8";
+  context.font = `800 ${Math.max(7, 8 * zoom)}px ui-monospace`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText("MUSE AGENT GATE", point.x, point.y - 77 * zoom);
+  context.fillStyle = "#b9fff2";
+  context.font = `700 ${Math.max(5, 6 * zoom)}px ui-monospace`;
+  context.fillText(
+    `${count} MARKED ${count === 1 ? "ARRIVAL" : "ARRIVALS"}`,
+    point.x,
+    point.y - 62 * zoom,
   );
 }
 
@@ -585,9 +702,91 @@ function drawQuestBeacon(
   context.fill();
 }
 
+function drawDistrictActivity(
+  context: CanvasRenderingContext2D,
+  district: IsoDistrict,
+  point: Point,
+  zoom: number,
+  time: number,
+) {
+  if (district.kind === "workshop") {
+    for (let index = 0; index < 4; index += 1) {
+      const cycle = (time * 0.0016 + index * 0.23) % 1;
+      const x = point.x - 58 * zoom + Math.sin(index * 2.8) * 12 * zoom;
+      const y = point.y - 22 * zoom - cycle * 42 * zoom;
+      context.fillStyle = `rgba(255, 204, 104, ${1 - cycle})`;
+      context.fillRect(x, y, 3 * zoom, 3 * zoom);
+    }
+  } else if (district.kind === "market") {
+    for (let index = 0; index < 3; index += 1) {
+      const float = Math.sin(time * 0.003 + index * 1.8) * 5 * zoom;
+      context.fillStyle = "#f2c55a";
+      context.beginPath();
+      context.arc(
+        point.x - 24 * zoom + index * 24 * zoom,
+        point.y - 102 * zoom + float,
+        5 * zoom,
+        0,
+        Math.PI * 2,
+      );
+      context.fill();
+      context.fillStyle = "#6a4d18";
+      context.font = `800 ${Math.max(5, 5.5 * zoom)}px ui-monospace`;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(
+        "$",
+        point.x - 24 * zoom + index * 24 * zoom,
+        point.y - 102 * zoom + float,
+      );
+    }
+  } else if (district.kind === "hall") {
+    const pulse = (time * 0.0012) % 1;
+    context.strokeStyle = `rgba(232, 176, 203, ${0.7 - pulse * 0.7})`;
+    context.lineWidth = Math.max(1, zoom);
+    context.beginPath();
+    context.ellipse(
+      point.x,
+      point.y - 120 * zoom,
+      (12 + pulse * 28) * zoom,
+      (5 + pulse * 11) * zoom,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.stroke();
+  } else if (district.kind === "school") {
+    for (let index = 0; index < 3; index += 1) {
+      const cycle = (time * 0.0007 + index * 0.31) % 1;
+      const x =
+        point.x +
+        Math.sin(cycle * Math.PI * 2 + index) * 35 * zoom;
+      const y = point.y - (78 + cycle * 42) * zoom;
+      context.save();
+      context.translate(x, y);
+      context.rotate(Math.sin(cycle * Math.PI * 2) * 0.25);
+      context.fillStyle = `rgba(225, 246, 216, ${0.85 - cycle * 0.55})`;
+      context.fillRect(-5 * zoom, -4 * zoom, 10 * zoom, 8 * zoom);
+      context.restore();
+    }
+  } else {
+    for (let index = 0; index < 3; index += 1) {
+      const bob = Math.sin(time * 0.003 + index * 2.1) * 3 * zoom;
+      const x = point.x - 48 * zoom + index * 48 * zoom;
+      const y = point.y - 62 * zoom + bob;
+      context.fillStyle = "rgba(235, 255, 246, 0.86)";
+      context.fillRect(x - 7 * zoom, y - 5 * zoom, 14 * zoom, 9 * zoom);
+      context.fillStyle = "#2b6f69";
+      context.fillRect(x - 3 * zoom, y - 1 * zoom, 2 * zoom, 2 * zoom);
+      context.fillRect(x + 1 * zoom, y - 1 * zoom, 2 * zoom, 2 * zoom);
+    }
+  }
+}
+
 function drawMuse(
   context: CanvasRenderingContext2D,
   muse: IsoMuse,
+  district: IsoDistrict,
   point: Point,
   zoom: number,
   time: number,
@@ -639,11 +838,63 @@ function drawMuse(
   context.fillRect(point.x + 2 * scale, baseY - 6 * scale, 5 * scale, 9 * scale - foot);
   context.fillStyle = "#10191f";
   context.fillRect(point.x - 9 * scale, baseY - 34 * scale, 18 * scale, 5 * scale);
+  context.strokeStyle = "#31464d";
+  context.lineWidth = Math.max(1, scale);
+  context.beginPath();
+  context.moveTo(point.x, baseY - 34 * scale);
+  context.lineTo(point.x, baseY - 42 * scale);
+  context.stroke();
+  context.fillStyle = featured ? "#ffbd78" : "#63dfd0";
+  context.beginPath();
+  context.arc(point.x, baseY - 44 * scale, 2.5 * scale, 0, Math.PI * 2);
+  context.fill();
   context.fillStyle = "#dffcf3";
   context.fillRect(point.x - 5 * scale, baseY - 24 * scale, 3 * scale, 3 * scale);
   context.fillRect(point.x + 2 * scale, baseY - 24 * scale, 3 * scale, 3 * scale);
+  context.fillStyle = "#dffcf3";
+  context.font = `800 ${Math.max(5, 5.5 * scale)}px ui-monospace`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText("M", point.x, baseY - 15 * scale);
 
-  if (featured || selected || zoom > 1.25) {
+  if (featured) {
+    const action = district.verb.toUpperCase();
+    const labelWidth = Math.max(
+      106 * scale,
+      context.measureText(muse.name).width + 46 * scale,
+    );
+    const labelY = baseY - 72 * scale;
+    context.fillStyle = "rgba(5,24,29,.94)";
+    context.fillRect(
+      point.x - labelWidth / 2,
+      labelY - 15 * scale,
+      labelWidth,
+      29 * scale,
+    );
+    context.strokeStyle = "#ffb473";
+    context.lineWidth = Math.max(1, scale);
+    context.strokeRect(
+      point.x - labelWidth / 2,
+      labelY - 15 * scale,
+      labelWidth,
+      29 * scale,
+    );
+    context.fillStyle = "#fff4e4";
+    context.font = `700 ${Math.max(7, 8 * scale)}px "DM Sans", sans-serif`;
+    context.textAlign = "left";
+    context.fillText(
+      muse.name,
+      point.x - labelWidth / 2 + 8 * scale,
+      labelY - 5 * scale,
+    );
+    context.fillStyle = "#ffbd78";
+    context.font = `800 ${Math.max(5, 5.5 * scale)}px ui-monospace`;
+    context.fillText(
+      `SIGNED MUSE · ${action}`,
+      point.x - labelWidth / 2 + 8 * scale,
+      labelY + 6 * scale,
+    );
+  } else if (selected || zoom > 1.25) {
     context.font = `700 ${Math.max(7, 8 * scale)}px ui-monospace`;
     const labelWidth = context.measureText(muse.name).width + 12 * scale;
     const labelY = baseY - 45 * scale;
@@ -668,13 +919,68 @@ function districtMusePoint(
   time: number,
 ) {
   const seed = hashText(muse.name);
-  const angle = (index / 5) * Math.PI * 2 + (seed % 100) / 30;
-  const pace = time * (0.00008 + (seed % 7) * 0.000006);
-  const radius = 1.45 + (index % 2) * 0.42;
-  return {
-    x: district.tile[0] + Math.cos(angle + pace) * radius,
-    y: district.tile[1] + Math.sin(angle + pace) * radius,
+  if (district.kind === "porch") {
+    const angle = (index / 5) * Math.PI * 2 + (seed % 100) / 30;
+    const pace = time * (0.00008 + (seed % 7) * 0.000006);
+    const radius = 1.45 + (index % 2) * 0.42;
+    return {
+      x: district.tile[0] + Math.cos(angle + pace) * radius,
+      y: district.tile[1] + Math.sin(angle + pace) * radius,
+    };
+  }
+
+  const districtAbove = district.tile[1] < WORLD_CENTER[1];
+  const start = {
+    x: district.tile[0] + (index % 3 - 1) * 0.28,
+    y: district.tile[1] + (districtAbove ? 1.35 : -1.35),
   };
+  const route = [
+    start,
+    { x: district.tile[0], y: WORLD_CENTER[1] },
+  ];
+  const deltaX = district.tile[0] - WORLD_CENTER[0];
+  const deltaY = district.tile[1] - WORLD_CENTER[1];
+  const distance = Math.max(0.001, Math.hypot(deltaX, deltaY));
+  const directionX = deltaX / distance;
+  const directionY = deltaY / distance;
+  const spread = (index - 2) * 0.34;
+  route.push({
+    x:
+      WORLD_CENTER[0] +
+      directionX * 2.05 +
+      -directionY * spread,
+    y:
+      WORLD_CENTER[1] +
+      directionY * 2.05 +
+      directionX * spread,
+  });
+  const phase =
+    (time * (0.000035 + (seed % 5) * 0.000004) + (seed % 997) / 997) % 1;
+  const travel = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+  const segmentLengths = route.slice(1).map((point, routeIndex) =>
+    Math.hypot(
+      point.x - route[routeIndex].x,
+      point.y - route[routeIndex].y,
+    ),
+  );
+  const total = segmentLengths.reduce((sum, length) => sum + length, 0);
+  let remaining = travel * total;
+  for (let routeIndex = 0; routeIndex < segmentLengths.length; routeIndex += 1) {
+    const segment = segmentLengths[routeIndex];
+    if (remaining <= segment) {
+      const progress = segment ? remaining / segment : 0;
+      return {
+        x:
+          route[routeIndex].x +
+          (route[routeIndex + 1].x - route[routeIndex].x) * progress,
+        y:
+          route[routeIndex].y +
+          (route[routeIndex + 1].y - route[routeIndex].y) * progress,
+      };
+    }
+    remaining -= segment;
+  }
+  return route[route.length - 1];
 }
 
 export default function IsometricTown({
@@ -685,6 +991,7 @@ export default function IsometricTown({
   selectedMuse,
   questDistrictId,
   claimTotal,
+  arrivalCount,
   onSelectDistrict,
   onSelectMuse,
 }: IsometricTownProps) {
@@ -950,6 +1257,19 @@ export default function IsometricTown({
         });
       });
 
+      const arrivalPoint = isoPoint(12, 1.25, width, height, camera);
+      drawables.push({
+        order: 13.25,
+        draw: () =>
+          drawArrivalGate(
+            context,
+            arrivalPoint,
+            camera.zoom,
+            arrivalCount,
+            time,
+          ),
+      });
+
       districts.forEach((district) => {
         const point = isoPoint(
           district.tile[0],
@@ -962,6 +1282,13 @@ export default function IsometricTown({
           order: district.tile[0] + district.tile[1],
           draw: () => {
             drawBuilding(context, district, point, camera.zoom, time, claimTotal);
+            drawDistrictActivity(
+              context,
+              district,
+              point,
+              camera.zoom,
+              time,
+            );
             const active =
               focusedDistrict?.id === district.id ||
               featuredMuse?.district === district.id ||
@@ -1002,6 +1329,7 @@ export default function IsometricTown({
               drawMuse(
                 context,
                 muse,
+                district,
                 screenPoint,
                 camera.zoom,
                 time,
@@ -1046,6 +1374,7 @@ export default function IsometricTown({
     };
   }, [
     claimTotal,
+    arrivalCount,
     districts,
     featuredMuse,
     focusedDistrict,
@@ -1184,11 +1513,17 @@ export default function IsometricTown({
         }}
       />
       <div className="iso-location">
-        <span>{focusedDistrict ? "DISTRICT FOCUS" : "LIVE WORLD"}</span>
-        <strong>{focusedDistrict?.name || "Muse Town"}</strong>
+        <span>
+          {focusedDistrict
+            ? "LIVE MUSE DISTRICT"
+            : "LIVE MUSE AGENT SIMULATION"}
+        </span>
+        <strong>
+          {focusedDistrict?.name || `${muses.length} Muses acting in public`}
+        </strong>
         <small>
           {focusedDistrict?.description ||
-            "Public Muse activity rendered as movement—not private thought."}
+            "Every character maps to a signed Musebook action—not private thought."}
         </small>
       </div>
       <div className="iso-controls" aria-label="Map controls">

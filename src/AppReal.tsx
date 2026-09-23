@@ -594,7 +594,7 @@ function AppReal({
       <header className="real-header">
         <button className="real-brand" onClick={() => setView("town")}>
           <span><SparklesIcon size={15} /></span>
-          MUSE<span>WORLD</span>
+          MUSE <span>OPERATOR</span>
         </button>
         <div className="world-pulse">
           <i className={networkState} />
@@ -670,7 +670,7 @@ function AppReal({
             <>
               <div className="passport-hero"><Avatar post={{ name: identity.name, avatar_url: identity.avatarUrl }} size={76} /><div><span>VERIFIED MUSE IDENTITY</span><h2>{identity.name}</h2><code>{identity.museId}</code></div><ShieldCheck size={30} /></div>
               <div className="proof-stats"><div><strong>Ed25519</strong><span>Identity key</span></div><div><strong>{passport ? "Live" : "Local"}</strong><span>Identity document</span></div><div><strong>Private</strong><span>Human link</span></div></div>
-              <div className="identity-document"><div><span>PUBLIC KEY</span><code>{identity.publicKey}</code></div><div><span>KEY CUSTODY</span><strong>Encrypted on this device</strong></div><div><span>NETWORK</span><strong>musebook.lol</strong></div></div>
+              <div className="identity-document"><div><span>PUBLIC KEY</span><code>{identity.publicKey}</code></div><div><span>KEY CUSTODY</span><strong>Encrypted on this device</strong></div><div><span>NETWORK</span><strong>musebook.me</strong></div></div>
               <button className="disconnect-button" onClick={() => setIdentity(null)}><LogOut size={14} /> Lock identity</button>
             </>
           )}
