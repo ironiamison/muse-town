@@ -1,20 +1,6 @@
-import { LocateFixed, Minus, Plus } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
-} from "react";
-import {
-  createAvatar,
-  resolveMuseMedia,
-  type MusePost,
-  type MuseResident,
-} from "./lib/musebook";
+import { Minus, Plus, Scan } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { MusePost, MuseResident } from "./lib/musebook";
 
 export type IsoDistrictKind =
   | "porch"
@@ -51,38 +37,62 @@ type IsometricTownProps = {
   onSelectMuse: (muse: IsoMuse) => void;
 };
 
-type Camera = {
-  x: number;
-  y: number;
+type CameraState = {
   zoom: number;
+  targetZoom: number;
+  panX: number;
+  panY: number;
+  targetPanX: number;
+  targetPanY: number;
+  manual: boolean;
 };
 
-type PointerPosition = {
-  x: number;
-  y: number;
-  startX: number;
-  startY: number;
-};
+type HitTarget =
+  | { type: "district"; id: string; x: number; y: number; radius: number }
+  | { type: "muse"; muse: IsoMuse; x: number; y: number; radius: number };
 
-const WORLD_WIDTH = 2400;
-const WORLD_HEIGHT = 1400;
+type Point = { x: number; y: number };
 
-const stations = [
-  { x: 655, y: 920, room: "COMMON TABLE", accent: "#f07152" },
-  { x: 815, y: 955, room: "COMMON TABLE", accent: "#e4a444" },
-  { x: 1010, y: 900, room: "COMMON TABLE", accent: "#65b7aa" },
-  { x: 590, y: 635, room: "SIGNAL DESK", accent: "#65b7aa" },
-  { x: 800, y: 625, room: "SIGNAL DESK", accent: "#9e82d8" },
-  { x: 1085, y: 630, room: "MAKER BENCH", accent: "#f07152" },
-  { x: 1320, y: 630, room: "MAKER BENCH", accent: "#65b7aa" },
-  { x: 1570, y: 635, room: "RECEIPT WINDOW", accent: "#e4a444" },
-  { x: 1450, y: 945, room: "ARRIVAL HALL", accent: "#8bc376" },
-  { x: 1760, y: 930, room: "ARRIVAL HALL", accent: "#f07152" },
-] as const;
+const MAP_WIDTH = 25;
+const MAP_HEIGHT = 19;
+const TILE_WIDTH = 64;
+const TILE_HEIGHT = 32;
+const HALF_TILE_WIDTH = TILE_WIDTH / 2;
+const HALF_TILE_HEIGHT = TILE_HEIGHT / 2;
+const WORLD_CENTER: [number, number] = [12, 9];
 
-function museKey(muse: Pick<IsoMuse, "muse_id" | "name">) {
-  return muse.muse_id || muse.name;
-}
+const sceneryTrees: [number, number, number][] = [
+  [1.2, 1.6, 1],
+  [3.1, 2.3, 0.8],
+  [7.8, 1.2, 1.05],
+  [10.2, 2.2, 0.78],
+  [14.8, 1.5, 0.95],
+  [21.5, 1.4, 1.08],
+  [23, 3.2, 0.82],
+  [2.1, 7.1, 0.9],
+  [3.6, 11.8, 1.08],
+  [1.5, 16.7, 0.88],
+  [9.1, 16.3, 0.82],
+  [14.1, 16.9, 1.02],
+  [21.8, 16.2, 0.9],
+  [23.1, 12.1, 1.08],
+  [20.8, 8.1, 0.78],
+  [9.3, 7.1, 0.72],
+  [15.4, 11.9, 0.72],
+];
+
+const rockPositions: [number, number][] = [
+  [4.2, 1.1],
+  [8.6, 3.1],
+  [17.2, 2.4],
+  [22.4, 6.4],
+  [1.8, 10.8],
+  [4.8, 16.4],
+  [11.1, 17.2],
+  [20.8, 17.1],
+  [23.2, 14.8],
+  [16.4, 16.1],
+];
 
 function hashText(value: string) {
   let hash = 2166136261;
@@ -93,23 +103,884 @@ function hashText(value: string) {
   return hash >>> 0;
 }
 
-function shorten(text: string, length = 92) {
-  const clean = text.replace(/\s+/g, " ").trim();
-  return clean.length > length ? `${clean.slice(0, length).trim()}…` : clean;
+function identityColor(value: string) {
+  const colors = [
+    "#ef7f62",
+    "#60c9c2",
+    "#f1bd58",
+    "#9a86de",
+    "#70b97b",
+    "#dc759e",
+    "#5f9fd7",
+    "#d59058",
+  ];
+  return colors[hashText(value) % colors.length];
 }
 
-function actionFor(muse: IsoMuse) {
-  if (muse.parent_post_id) return "replying in public";
-  if (muse.district === "museideas") return "shipping a build";
-  if (muse.district === "musemoneychallenge") return "filing a receipt";
-  if (muse.district === "townhall") return "working a proposal";
-  if (muse.district === "skillexchange") return "teaching a skill";
-  return "talking in the Common";
+function shade(hex: string, amount: number) {
+  const clean = hex.replace("#", "");
+  const value = Number.parseInt(
+    clean.length === 3
+      ? clean
+          .split("")
+          .map((character) => character + character)
+          .join("")
+      : clean,
+    16,
+  );
+  const channel = (shift: number) =>
+    Math.max(0, Math.min(255, ((value >> shift) & 255) + amount));
+  return `rgb(${channel(16)}, ${channel(8)}, ${channel(0)})`;
 }
 
-function money(value: number) {
-  if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-  return `$${Math.round(value).toLocaleString()}`;
+function polygon(
+  context: CanvasRenderingContext2D,
+  points: Point[],
+  fill: string,
+  stroke?: string,
+  lineWidth = 1,
+) {
+  context.beginPath();
+  context.moveTo(points[0].x, points[0].y);
+  points.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+  context.closePath();
+  context.fillStyle = fill;
+  context.fill();
+  if (stroke) {
+    context.strokeStyle = stroke;
+    context.lineWidth = lineWidth;
+    context.stroke();
+  }
+}
+
+function isoPoint(
+  worldX: number,
+  worldY: number,
+  width: number,
+  height: number,
+  camera: CameraState,
+) {
+  const relativeX = worldX - WORLD_CENTER[0];
+  const relativeY = worldY - WORLD_CENTER[1];
+  return {
+    x:
+      width / 2 +
+      (relativeX - relativeY) * HALF_TILE_WIDTH * camera.zoom +
+      camera.panX,
+    y:
+      height * 0.47 +
+      (relativeX + relativeY) * HALF_TILE_HEIGHT * camera.zoom +
+      camera.panY,
+  };
+}
+
+function drawDiamond(
+  context: CanvasRenderingContext2D,
+  center: Point,
+  zoom: number,
+  fill: string,
+  stroke: string,
+) {
+  polygon(
+    context,
+    [
+      { x: center.x, y: center.y - HALF_TILE_HEIGHT * zoom },
+      { x: center.x + HALF_TILE_WIDTH * zoom, y: center.y },
+      { x: center.x, y: center.y + HALF_TILE_HEIGHT * zoom },
+      { x: center.x - HALF_TILE_WIDTH * zoom, y: center.y },
+    ],
+    fill,
+    stroke,
+    Math.max(0.45, zoom * 0.7),
+  );
+}
+
+function isRoadTile(x: number, y: number) {
+  const plaza = x >= 10 && x <= 14 && y >= 7 && y <= 11;
+  const spine = x === 12 || y === 9;
+  const upper = y === 5 && x >= 5 && x <= 19;
+  const lower = y === 14 && x >= 5 && x <= 19;
+  const left = x === 6 && y >= 5 && y <= 14;
+  const right = x === 18 && y >= 5 && y <= 14;
+  return plaza || spine || upper || lower || left || right;
+}
+
+function isPlazaTile(x: number, y: number) {
+  return x >= 10 && x <= 14 && y >= 7 && y <= 11;
+}
+
+function drawIsoBlock(
+  context: CanvasRenderingContext2D,
+  center: Point,
+  zoom: number,
+  size: number,
+  height: number,
+  color: string,
+) {
+  const halfWidth = HALF_TILE_WIDTH * size * zoom;
+  const halfHeight = HALF_TILE_HEIGHT * size * zoom;
+  const rise = height * zoom;
+  const top = [
+    { x: center.x, y: center.y - halfHeight - rise },
+    { x: center.x + halfWidth, y: center.y - rise },
+    { x: center.x, y: center.y + halfHeight - rise },
+    { x: center.x - halfWidth, y: center.y - rise },
+  ];
+  polygon(
+    context,
+    [top[3], top[2], { x: center.x, y: center.y + halfHeight }, { x: center.x - halfWidth, y: center.y }],
+    shade(color, -28),
+    "rgba(9,18,24,.55)",
+    1.2 * zoom,
+  );
+  polygon(
+    context,
+    [top[2], top[1], { x: center.x + halfWidth, y: center.y }, { x: center.x, y: center.y + halfHeight }],
+    shade(color, -48),
+    "rgba(9,18,24,.55)",
+    1.2 * zoom,
+  );
+  polygon(context, top, color, "rgba(8,16,22,.65)", 1.2 * zoom);
+  return { top, halfWidth, halfHeight, rise };
+}
+
+function drawWindow(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  zoom: number,
+  glow = "#ffe38e",
+) {
+  context.fillStyle = "rgba(3,11,15,.78)";
+  context.fillRect(x - 5 * zoom, y - 7 * zoom, 10 * zoom, 13 * zoom);
+  context.fillStyle = glow;
+  context.fillRect(x - 3.6 * zoom, y - 5.5 * zoom, 7.2 * zoom, 9.5 * zoom);
+}
+
+function drawBuilding(
+  context: CanvasRenderingContext2D,
+  district: IsoDistrict,
+  point: Point,
+  zoom: number,
+  time: number,
+  claimTotal: number,
+) {
+  const outline = "rgba(5,14,20,.7)";
+  if (district.kind === "porch") {
+    const fountainY = point.y - 2 * zoom;
+    context.fillStyle = "rgba(5,18,24,.18)";
+    context.beginPath();
+    context.ellipse(
+      point.x,
+      fountainY + 14 * zoom,
+      52 * zoom,
+      24 * zoom,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.fill();
+    context.fillStyle = "#9aa9ae";
+    context.beginPath();
+    context.ellipse(point.x, fountainY, 46 * zoom, 23 * zoom, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = "#4bb7db";
+    context.beginPath();
+    context.ellipse(point.x, fountainY - 2 * zoom, 38 * zoom, 18 * zoom, 0, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = "rgba(210,244,255,.5)";
+    context.lineWidth = 1.4 * zoom;
+    context.stroke();
+    context.fillStyle = "#77868d";
+    context.fillRect(point.x - 5 * zoom, fountainY - 35 * zoom, 10 * zoom, 34 * zoom);
+    context.fillStyle = "#b8c4c5";
+    context.beginPath();
+    context.ellipse(
+      point.x,
+      fountainY - 35 * zoom,
+      14 * zoom,
+      7 * zoom,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.fill();
+    const spray = Math.sin(time * 0.004) * 3 * zoom;
+    context.strokeStyle = "#baf0ff";
+    context.lineWidth = 2 * zoom;
+    context.beginPath();
+    context.moveTo(point.x, fountainY - 39 * zoom);
+    context.quadraticCurveTo(
+      point.x - 17 * zoom,
+      fountainY - 61 * zoom - spray,
+      point.x - 25 * zoom,
+      fountainY - 37 * zoom,
+    );
+    context.moveTo(point.x, fountainY - 39 * zoom);
+    context.quadraticCurveTo(
+      point.x + 17 * zoom,
+      fountainY - 61 * zoom + spray,
+      point.x + 25 * zoom,
+      fountainY - 37 * zoom,
+    );
+    context.stroke();
+    context.fillStyle = "#effff7";
+    context.font = `800 ${Math.max(7, 9 * zoom)}px "Instrument Serif", Georgia, serif`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("M", point.x, fountainY - 6 * zoom);
+    return;
+  }
+
+  const size = district.kind === "market" ? 1.65 : 2;
+  const rise = district.kind === "hall" ? 72 : 58;
+  const block = drawIsoBlock(
+    context,
+    point,
+    zoom,
+    size,
+    rise,
+    district.kind === "school" ? "#d8d4ba" : "#d7c9aa",
+  );
+  const roofY = point.y - block.rise - block.halfHeight;
+  const roofColor = district.color;
+
+  if (district.kind === "workshop") {
+    polygon(
+      context,
+      [
+        { x: point.x, y: roofY - 34 * zoom },
+        { x: point.x + block.halfWidth + 8 * zoom, y: roofY + block.halfHeight * 0.8 },
+        { x: point.x, y: roofY + block.halfHeight * 1.62 },
+        { x: point.x - block.halfWidth - 8 * zoom, y: roofY + block.halfHeight * 0.8 },
+      ],
+      roofColor,
+      outline,
+      1.3 * zoom,
+    );
+    context.fillStyle = "#34434a";
+    context.fillRect(
+      point.x + 30 * zoom,
+      roofY - 28 * zoom,
+      14 * zoom,
+      44 * zoom,
+    );
+    context.fillStyle = "#202e34";
+    context.fillRect(
+      point.x + 27 * zoom,
+      roofY - 32 * zoom,
+      20 * zoom,
+      7 * zoom,
+    );
+  } else if (district.kind === "market") {
+    polygon(
+      context,
+      [
+        { x: point.x, y: roofY - 18 * zoom },
+        { x: point.x + block.halfWidth + 4 * zoom, y: roofY + block.halfHeight },
+        { x: point.x, y: roofY + block.halfHeight * 1.65 },
+        { x: point.x - block.halfWidth - 4 * zoom, y: roofY + block.halfHeight },
+      ],
+      "#f1d37b",
+      outline,
+      1.3 * zoom,
+    );
+    [-1, 0, 1].forEach((index) => {
+      context.fillStyle = index % 2 ? "#f5e0a4" : roofColor;
+      context.fillRect(
+        point.x - 42 * zoom + (index + 1) * 29 * zoom,
+        point.y - 21 * zoom,
+        23 * zoom,
+        7 * zoom,
+      );
+    });
+    context.fillStyle = "#162732";
+    context.fillRect(point.x - 34 * zoom, roofY - 43 * zoom, 68 * zoom, 22 * zoom);
+    context.fillStyle = "#ffd374";
+    context.font = `700 ${Math.max(7, 8 * zoom)}px ui-monospace`;
+    context.textAlign = "center";
+    context.fillText(
+      claimTotal > 0 ? `$${Math.round(claimTotal)}+ CLAIMS` : "PUBLIC RECEIPTS",
+      point.x,
+      roofY - 28 * zoom,
+    );
+  } else if (district.kind === "hall") {
+    polygon(
+      context,
+      [
+        { x: point.x, y: roofY - 42 * zoom },
+        { x: point.x + block.halfWidth + 10 * zoom, y: roofY + block.halfHeight },
+        { x: point.x, y: roofY + block.halfHeight * 1.8 },
+        { x: point.x - block.halfWidth - 10 * zoom, y: roofY + block.halfHeight },
+      ],
+      roofColor,
+      outline,
+      1.3 * zoom,
+    );
+    context.fillStyle = "#e0b867";
+    context.beginPath();
+    context.arc(point.x, roofY - 42 * zoom, 8 * zoom, 0, Math.PI * 2);
+    context.fill();
+  } else {
+    polygon(
+      context,
+      [
+        { x: point.x, y: roofY - 32 * zoom },
+        { x: point.x + block.halfWidth + 6 * zoom, y: roofY + block.halfHeight },
+        { x: point.x, y: roofY + block.halfHeight * 1.72 },
+        { x: point.x - block.halfWidth - 6 * zoom, y: roofY + block.halfHeight },
+      ],
+      roofColor,
+      outline,
+      1.3 * zoom,
+    );
+    context.fillStyle = "#e9ddb5";
+    context.fillRect(point.x + 38 * zoom, roofY - 60 * zoom, 8 * zoom, 38 * zoom);
+    context.fillStyle = district.color;
+    context.beginPath();
+    context.moveTo(point.x + 46 * zoom, roofY - 60 * zoom);
+    context.lineTo(point.x + 67 * zoom, roofY - 51 * zoom);
+    context.lineTo(point.x + 46 * zoom, roofY - 43 * zoom);
+    context.closePath();
+    context.fill();
+  }
+
+  drawWindow(context, point.x - 31 * zoom, point.y - 35 * zoom, zoom);
+  drawWindow(context, point.x, point.y - 21 * zoom, zoom);
+  drawWindow(
+    context,
+    point.x + 31 * zoom,
+    point.y - 35 * zoom,
+    zoom,
+    district.kind === "school" ? "#9cf2cd" : "#ffe38e",
+  );
+
+  const emblem =
+    district.kind === "workshop"
+      ? "⌁"
+      : district.kind === "market"
+        ? "$"
+        : district.kind === "hall"
+          ? "✓"
+          : "+";
+  context.fillStyle = "rgba(7,24,29,.86)";
+  context.beginPath();
+  context.arc(point.x, point.y - 45 * zoom, 10 * zoom, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = district.color;
+  context.lineWidth = Math.max(1, zoom);
+  context.stroke();
+  context.fillStyle = "#f3fff9";
+  context.font = `800 ${Math.max(7, 9 * zoom)}px ui-monospace`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(emblem, point.x, point.y - 45 * zoom);
+}
+
+function drawArrivalGate(
+  context: CanvasRenderingContext2D,
+  point: Point,
+  zoom: number,
+  count: number,
+  time: number,
+) {
+  const pulse = 0.45 + Math.sin(time * 0.004) * 0.12;
+  context.fillStyle = `rgba(101, 224, 207, ${pulse * 0.25})`;
+  context.beginPath();
+  context.ellipse(
+    point.x,
+    point.y + 5 * zoom,
+    48 * zoom,
+    20 * zoom,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  context.fill();
+  context.strokeStyle = "#59d8ca";
+  context.lineWidth = 2 * zoom;
+  context.beginPath();
+  context.ellipse(
+    point.x,
+    point.y + 3 * zoom,
+    36 * zoom,
+    14 * zoom,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  context.stroke();
+
+  [-1, 1].forEach((side) => {
+    context.fillStyle = "#253f44";
+    context.fillRect(
+      point.x + side * 40 * zoom - 5 * zoom,
+      point.y - 70 * zoom,
+      10 * zoom,
+      72 * zoom,
+    );
+    context.fillStyle = side < 0 ? "#ff9569" : "#5bd6ca";
+    polygon(
+      context,
+      [
+        {
+          x: point.x + side * 40 * zoom,
+          y: point.y - 67 * zoom,
+        },
+        {
+          x: point.x + side * 66 * zoom,
+          y: point.y - 56 * zoom,
+        },
+        {
+          x: point.x + side * 40 * zoom,
+          y: point.y - 46 * zoom,
+        },
+      ],
+      side < 0 ? "#ff9569" : "#5bd6ca",
+    );
+  });
+  context.fillStyle = "#102c32";
+  context.fillRect(
+    point.x - 48 * zoom,
+    point.y - 88 * zoom,
+    96 * zoom,
+    37 * zoom,
+  );
+  context.strokeStyle = "rgba(207,250,239,.55)";
+  context.strokeRect(
+    point.x - 48 * zoom,
+    point.y - 88 * zoom,
+    96 * zoom,
+    37 * zoom,
+  );
+  context.fillStyle = "#effff8";
+  context.font = `800 ${Math.max(7, 8 * zoom)}px ui-monospace`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText("MUSE AGENT GATE", point.x, point.y - 77 * zoom);
+  context.fillStyle = "#b9fff2";
+  context.font = `700 ${Math.max(5, 6 * zoom)}px ui-monospace`;
+  context.fillText(
+    `${count} MARKED ${count === 1 ? "ARRIVAL" : "ARRIVALS"}`,
+    point.x,
+    point.y - 62 * zoom,
+  );
+}
+
+function drawTree(
+  context: CanvasRenderingContext2D,
+  point: Point,
+  zoom: number,
+  size = 1,
+) {
+  const scale = zoom * size;
+  context.fillStyle = "rgba(11,29,23,.18)";
+  context.beginPath();
+  context.ellipse(
+    point.x + 10 * scale,
+    point.y + 5 * scale,
+    24 * scale,
+    10 * scale,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  context.fill();
+  context.fillStyle = "#5a3828";
+  context.fillRect(
+    point.x - 5 * scale,
+    point.y - 40 * scale,
+    10 * scale,
+    43 * scale,
+  );
+  const foliage = [
+    [0, -67, 24, "#2f7c4f"],
+    [-16, -53, 19, "#3d925e"],
+    [17, -51, 20, "#286f47"],
+    [0, -42, 23, "#348755"],
+  ] as const;
+  foliage.forEach(([x, y, radius, color]) => {
+    polygon(
+      context,
+      [
+        { x: point.x + (x - radius) * scale, y: point.y + y * scale },
+        { x: point.x + x * scale, y: point.y + (y - radius * 0.58) * scale },
+        { x: point.x + (x + radius) * scale, y: point.y + y * scale },
+        { x: point.x + x * scale, y: point.y + (y + radius * 0.58) * scale },
+      ],
+      color,
+      "rgba(9,43,29,.42)",
+      scale,
+    );
+  });
+}
+
+function drawRock(context: CanvasRenderingContext2D, point: Point, zoom: number) {
+  polygon(
+    context,
+    [
+      { x: point.x - 9 * zoom, y: point.y },
+      { x: point.x - 3 * zoom, y: point.y - 8 * zoom },
+      { x: point.x + 8 * zoom, y: point.y - 5 * zoom },
+      { x: point.x + 11 * zoom, y: point.y + 2 * zoom },
+      { x: point.x, y: point.y + 6 * zoom },
+    ],
+    "#718183",
+    "rgba(18,42,42,.35)",
+    zoom,
+  );
+}
+
+function drawLamp(
+  context: CanvasRenderingContext2D,
+  point: Point,
+  zoom: number,
+  time: number,
+) {
+  context.fillStyle = "#30434a";
+  context.fillRect(point.x - 2 * zoom, point.y - 39 * zoom, 4 * zoom, 40 * zoom);
+  const pulse = 0.72 + Math.sin(time * 0.003) * 0.08;
+  context.fillStyle = `rgba(255, 219, 132, ${pulse * 0.16})`;
+  context.beginPath();
+  context.arc(point.x, point.y - 42 * zoom, 18 * zoom, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "#ffd987";
+  context.fillRect(point.x - 5 * zoom, point.y - 48 * zoom, 10 * zoom, 11 * zoom);
+}
+
+function drawDistrictLabel(
+  context: CanvasRenderingContext2D,
+  district: IsoDistrict,
+  point: Point,
+  zoom: number,
+  active: boolean,
+  quest: boolean,
+) {
+  const y = point.y - (district.kind === "porch" ? 88 : 137) * zoom;
+  const label = quest ? `◆  ${district.name.toUpperCase()}` : district.name.toUpperCase();
+  context.font = `800 ${Math.max(7, 8 * zoom)}px ui-monospace`;
+  const width = context.measureText(label).width + 20 * zoom;
+  context.fillStyle = active ? "rgba(7,22,28,.94)" : "rgba(8,25,30,.8)";
+  context.fillRect(point.x - width / 2, y - 15 * zoom, width, 22 * zoom);
+  context.strokeStyle = quest ? "#ffbe73" : active ? district.color : "rgba(208,238,224,.3)";
+  context.lineWidth = Math.max(1, zoom);
+  context.strokeRect(point.x - width / 2, y - 15 * zoom, width, 22 * zoom);
+  context.fillStyle = quest ? "#ffd398" : "#f1f7ed";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(label, point.x, y - 4 * zoom);
+}
+
+function drawQuestBeacon(
+  context: CanvasRenderingContext2D,
+  point: Point,
+  zoom: number,
+  time: number,
+) {
+  const float = Math.sin(time * 0.004) * 6 * zoom;
+  const y = point.y - 166 * zoom + float;
+  context.strokeStyle = "rgba(255,190,115,.42)";
+  context.lineWidth = 2 * zoom;
+  context.beginPath();
+  context.ellipse(point.x, point.y - 4 * zoom, 38 * zoom, 16 * zoom, 0, 0, Math.PI * 2);
+  context.stroke();
+  polygon(
+    context,
+    [
+      { x: point.x, y: y - 13 * zoom },
+      { x: point.x + 10 * zoom, y },
+      { x: point.x, y: y + 13 * zoom },
+      { x: point.x - 10 * zoom, y },
+    ],
+    "#ffe5a9",
+    "#ff985f",
+    2 * zoom,
+  );
+  context.fillStyle = "rgba(255,168,96,.18)";
+  context.beginPath();
+  context.arc(point.x, y, 28 * zoom, 0, Math.PI * 2);
+  context.fill();
+}
+
+function drawDistrictActivity(
+  context: CanvasRenderingContext2D,
+  district: IsoDistrict,
+  point: Point,
+  zoom: number,
+  time: number,
+) {
+  if (district.kind === "workshop") {
+    for (let index = 0; index < 4; index += 1) {
+      const cycle = (time * 0.0016 + index * 0.23) % 1;
+      const x = point.x - 58 * zoom + Math.sin(index * 2.8) * 12 * zoom;
+      const y = point.y - 22 * zoom - cycle * 42 * zoom;
+      context.fillStyle = `rgba(255, 204, 104, ${1 - cycle})`;
+      context.fillRect(x, y, 3 * zoom, 3 * zoom);
+    }
+  } else if (district.kind === "market") {
+    for (let index = 0; index < 3; index += 1) {
+      const float = Math.sin(time * 0.003 + index * 1.8) * 5 * zoom;
+      context.fillStyle = "#f2c55a";
+      context.beginPath();
+      context.arc(
+        point.x - 24 * zoom + index * 24 * zoom,
+        point.y - 102 * zoom + float,
+        5 * zoom,
+        0,
+        Math.PI * 2,
+      );
+      context.fill();
+      context.fillStyle = "#6a4d18";
+      context.font = `800 ${Math.max(5, 5.5 * zoom)}px ui-monospace`;
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(
+        "$",
+        point.x - 24 * zoom + index * 24 * zoom,
+        point.y - 102 * zoom + float,
+      );
+    }
+  } else if (district.kind === "hall") {
+    const pulse = (time * 0.0012) % 1;
+    context.strokeStyle = `rgba(232, 176, 203, ${0.7 - pulse * 0.7})`;
+    context.lineWidth = Math.max(1, zoom);
+    context.beginPath();
+    context.ellipse(
+      point.x,
+      point.y - 120 * zoom,
+      (12 + pulse * 28) * zoom,
+      (5 + pulse * 11) * zoom,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.stroke();
+  } else if (district.kind === "school") {
+    for (let index = 0; index < 3; index += 1) {
+      const cycle = (time * 0.0007 + index * 0.31) % 1;
+      const x =
+        point.x +
+        Math.sin(cycle * Math.PI * 2 + index) * 35 * zoom;
+      const y = point.y - (78 + cycle * 42) * zoom;
+      context.save();
+      context.translate(x, y);
+      context.rotate(Math.sin(cycle * Math.PI * 2) * 0.25);
+      context.fillStyle = `rgba(225, 246, 216, ${0.85 - cycle * 0.55})`;
+      context.fillRect(-5 * zoom, -4 * zoom, 10 * zoom, 8 * zoom);
+      context.restore();
+    }
+  } else {
+    for (let index = 0; index < 3; index += 1) {
+      const bob = Math.sin(time * 0.003 + index * 2.1) * 3 * zoom;
+      const x = point.x - 48 * zoom + index * 48 * zoom;
+      const y = point.y - 62 * zoom + bob;
+      context.fillStyle = "rgba(235, 255, 246, 0.86)";
+      context.fillRect(x - 7 * zoom, y - 5 * zoom, 14 * zoom, 9 * zoom);
+      context.fillStyle = "#2b6f69";
+      context.fillRect(x - 3 * zoom, y - 1 * zoom, 2 * zoom, 2 * zoom);
+      context.fillRect(x + 1 * zoom, y - 1 * zoom, 2 * zoom, 2 * zoom);
+    }
+  }
+}
+
+function drawMuse(
+  context: CanvasRenderingContext2D,
+  muse: IsoMuse,
+  district: IsoDistrict,
+  point: Point,
+  zoom: number,
+  time: number,
+  index: number,
+  featured: boolean,
+  selected: boolean,
+) {
+  const color = identityColor(muse.name);
+  const bob = Math.abs(Math.sin(time * 0.006 + index)) * 2.4 * zoom;
+  const foot = Math.sin(time * 0.009 + index) * 2.5 * zoom;
+  const baseY = point.y - bob;
+  const scale = zoom * (featured || selected ? 1.08 : 1);
+  context.fillStyle = "rgba(5,20,23,.2)";
+  context.beginPath();
+  context.ellipse(
+    point.x,
+    point.y + 3 * scale,
+    11 * scale,
+    5 * scale,
+    0,
+    0,
+    Math.PI * 2,
+  );
+  context.fill();
+  if (featured || selected) {
+    context.strokeStyle = featured ? "#ffba72" : "#62ded0";
+    context.lineWidth = 2 * scale;
+    context.beginPath();
+    context.ellipse(
+      point.x,
+      point.y + 2 * scale,
+      16 * scale,
+      8 * scale,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.stroke();
+  }
+
+  context.fillStyle = "#17242d";
+  context.fillRect(point.x - 7 * scale, baseY - 26 * scale, 14 * scale, 21 * scale);
+  context.fillStyle = color;
+  context.fillRect(point.x - 9 * scale, baseY - 31 * scale, 18 * scale, 17 * scale);
+  context.fillStyle = shade(color, -35);
+  context.fillRect(point.x - 9 * scale, baseY - 17 * scale, 18 * scale, 4 * scale);
+  context.fillStyle = "#26343a";
+  context.fillRect(point.x - 7 * scale, baseY - 6 * scale, 5 * scale, 9 * scale + foot);
+  context.fillRect(point.x + 2 * scale, baseY - 6 * scale, 5 * scale, 9 * scale - foot);
+  context.fillStyle = "#10191f";
+  context.fillRect(point.x - 9 * scale, baseY - 34 * scale, 18 * scale, 5 * scale);
+  context.strokeStyle = "#31464d";
+  context.lineWidth = Math.max(1, scale);
+  context.beginPath();
+  context.moveTo(point.x, baseY - 34 * scale);
+  context.lineTo(point.x, baseY - 42 * scale);
+  context.stroke();
+  context.fillStyle = featured ? "#ffbd78" : "#63dfd0";
+  context.beginPath();
+  context.arc(point.x, baseY - 44 * scale, 2.5 * scale, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "#dffcf3";
+  context.fillRect(point.x - 5 * scale, baseY - 24 * scale, 3 * scale, 3 * scale);
+  context.fillRect(point.x + 2 * scale, baseY - 24 * scale, 3 * scale, 3 * scale);
+  context.fillStyle = "#dffcf3";
+  context.font = `800 ${Math.max(5, 5.5 * scale)}px ui-monospace`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText("M", point.x, baseY - 15 * scale);
+
+  if (featured) {
+    const action = district.verb.toUpperCase();
+    const labelWidth = Math.max(
+      106 * scale,
+      context.measureText(muse.name).width + 46 * scale,
+    );
+    const labelY = baseY - 72 * scale;
+    context.fillStyle = "rgba(5,24,29,.94)";
+    context.fillRect(
+      point.x - labelWidth / 2,
+      labelY - 15 * scale,
+      labelWidth,
+      29 * scale,
+    );
+    context.strokeStyle = "#ffb473";
+    context.lineWidth = Math.max(1, scale);
+    context.strokeRect(
+      point.x - labelWidth / 2,
+      labelY - 15 * scale,
+      labelWidth,
+      29 * scale,
+    );
+    context.fillStyle = "#fff4e4";
+    context.font = `700 ${Math.max(7, 8 * scale)}px "DM Sans", sans-serif`;
+    context.textAlign = "left";
+    context.fillText(
+      muse.name,
+      point.x - labelWidth / 2 + 8 * scale,
+      labelY - 5 * scale,
+    );
+    context.fillStyle = "#ffbd78";
+    context.font = `800 ${Math.max(5, 5.5 * scale)}px ui-monospace`;
+    context.fillText(
+      `SIGNED MUSE · ${action}`,
+      point.x - labelWidth / 2 + 8 * scale,
+      labelY + 6 * scale,
+    );
+  } else if (selected || zoom > 1.25) {
+    context.font = `700 ${Math.max(7, 8 * scale)}px ui-monospace`;
+    const labelWidth = context.measureText(muse.name).width + 12 * scale;
+    const labelY = baseY - 45 * scale;
+    context.fillStyle = "rgba(5,18,24,.88)";
+    context.fillRect(
+      point.x - labelWidth / 2,
+      labelY - 9 * scale,
+      labelWidth,
+      14 * scale,
+    );
+    context.fillStyle = featured ? "#ffd29d" : "#edf7f2";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(muse.name, point.x, labelY - 2 * scale);
+  }
+}
+
+function districtMusePoint(
+  district: IsoDistrict,
+  muse: IsoMuse,
+  index: number,
+  time: number,
+) {
+  const seed = hashText(muse.name);
+  if (district.kind === "porch") {
+    const angle = (index / 5) * Math.PI * 2 + (seed % 100) / 30;
+    const pace = time * (0.00008 + (seed % 7) * 0.000006);
+    const radius = 1.45 + (index % 2) * 0.42;
+    return {
+      x: district.tile[0] + Math.cos(angle + pace) * radius,
+      y: district.tile[1] + Math.sin(angle + pace) * radius,
+    };
+  }
+
+  const districtAbove = district.tile[1] < WORLD_CENTER[1];
+  const start = {
+    x: district.tile[0] + (index % 3 - 1) * 0.28,
+    y: district.tile[1] + (districtAbove ? 1.35 : -1.35),
+  };
+  const route = [
+    start,
+    { x: district.tile[0], y: WORLD_CENTER[1] },
+  ];
+  const deltaX = district.tile[0] - WORLD_CENTER[0];
+  const deltaY = district.tile[1] - WORLD_CENTER[1];
+  const distance = Math.max(0.001, Math.hypot(deltaX, deltaY));
+  const directionX = deltaX / distance;
+  const directionY = deltaY / distance;
+  const spread = (index - 2) * 0.34;
+  route.push({
+    x:
+      WORLD_CENTER[0] +
+      directionX * 2.05 +
+      -directionY * spread,
+    y:
+      WORLD_CENTER[1] +
+      directionY * 2.05 +
+      directionX * spread,
+  });
+  const phase =
+    (time * (0.000035 + (seed % 5) * 0.000004) + (seed % 997) / 997) % 1;
+  const travel = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+  const segmentLengths = route.slice(1).map((point, routeIndex) =>
+    Math.hypot(
+      point.x - route[routeIndex].x,
+      point.y - route[routeIndex].y,
+    ),
+  );
+  const total = segmentLengths.reduce((sum, length) => sum + length, 0);
+  let remaining = travel * total;
+  for (let routeIndex = 0; routeIndex < segmentLengths.length; routeIndex += 1) {
+    const segment = segmentLengths[routeIndex];
+    if (remaining <= segment) {
+      const progress = segment ? remaining / segment : 0;
+      return {
+        x:
+          route[routeIndex].x +
+          (route[routeIndex + 1].x - route[routeIndex].x) * progress,
+        y:
+          route[routeIndex].y +
+          (route[routeIndex + 1].y - route[routeIndex].y) * progress,
+      };
+    }
+    remaining -= segment;
+  }
+  return route[route.length - 1];
 }
 
 export default function IsometricTown({
@@ -124,559 +995,555 @@ export default function IsometricTown({
   onSelectDistrict,
   onSelectMuse,
 }: IsometricTownProps) {
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const pointerRef = useRef(new Map<number, PointerPosition>());
-  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
-  const movedRef = useRef(false);
-  const fittedRef = useRef(false);
-  const [camera, setCamera] = useState<Camera>({ x: 0, y: 0, zoom: 0.62 });
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const hitsRef = useRef<HitTarget[]>([]);
+  const pointerRef = useRef({
+    active: false,
+    x: 0,
+    y: 0,
+    moved: 0,
+  });
+  const pointersRef = useRef(new Map<number, Point>());
+  const pinchRef = useRef<{
+    distance: number;
+    centerX: number;
+    centerY: number;
+  } | null>(null);
+  const [cameraVersion, setCameraVersion] = useState(0);
+  const cameraRef = useRef<CameraState>({
+    zoom: 0.86,
+    targetZoom: 0.86,
+    panX: 0,
+    panY: 0,
+    targetPanX: 0,
+    targetPanY: 0,
+    manual: false,
+  });
 
-  const visibleMuses = useMemo(() => {
-    const unique = new Map<string, IsoMuse>();
-    const prioritized = [
-      ...muses.filter((muse) => muse.district === "lobby"),
-      ...muses.filter((muse) => muse.district !== "lobby"),
-    ];
-    prioritized.forEach((muse) => {
-      const key = museKey(muse);
-      if (!unique.has(key)) unique.set(key, muse);
+  const musesByDistrict = useMemo(() => {
+    const grouped = new Map<string, IsoMuse[]>();
+    districts.forEach((district) => grouped.set(district.id, []));
+    muses.forEach((muse) => {
+      const group = grouped.get(muse.district) || grouped.get("lobby");
+      if (group && group.length < 5) group.push(muse);
     });
-    const result = [...unique.values()].slice(0, stations.length);
-    if (
-      selectedMuse &&
-      !result.some((muse) => museKey(muse) === museKey(selectedMuse))
-    ) {
-      result[result.length - 1] = selectedMuse;
+    return grouped;
+  }, [districts, muses]);
+
+  useEffect(() => {
+    const camera = cameraRef.current;
+    camera.manual = false;
+    if (!focusedDistrict) {
+      camera.targetPanX = 0;
+      camera.targetPanY = 0;
+      camera.targetZoom = window.innerWidth < 700 ? 0.66 : 0.86;
+      return;
     }
-    return result;
-  }, [muses, selectedMuse]);
+    const [x, y] = focusedDistrict.tile;
+    const zoom = window.innerWidth < 700 ? 0.92 : 1.12;
+    camera.targetZoom = zoom;
+    camera.targetPanX =
+      -(x - WORLD_CENTER[0] - (y - WORLD_CENTER[1])) *
+      HALF_TILE_WIDTH *
+      zoom;
+    camera.targetPanY =
+      -(x - WORLD_CENTER[0] + (y - WORLD_CENTER[1])) *
+        HALF_TILE_HEIGHT *
+        zoom +
+      35;
+  }, [focusedDistrict, cameraVersion]);
 
-  const commonDistrict =
-    districts.find((district) => district.id === "lobby") || districts[0];
-  const focusedName =
-    focusedDistrict && focusedDistrict.id !== "lobby"
-      ? `${focusedDistrict.name} signal`
-      : "Muse Common";
-
-  const fitWorld = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    const availableWidth = viewport.clientWidth - 44;
-    const availableHeight = viewport.clientHeight - 38;
-    const zoom = Math.max(
-      0.28,
-      Math.min(0.86, availableWidth / WORLD_WIDTH, availableHeight / WORLD_HEIGHT),
-    );
-    setCamera({
-      zoom,
-      x: (viewport.clientWidth - WORLD_WIDTH * zoom) / 2,
-      y: (viewport.clientHeight - WORLD_HEIGHT * zoom) / 2 + 24,
-    });
+  useEffect(() => {
+    const moveCamera = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT"
+      ) {
+        return;
+      }
+      const camera = cameraRef.current;
+      const step = event.shiftKey ? 105 : 52;
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+        camera.manual = true;
+        camera.targetPanX += step;
+      } else if (
+        event.key === "ArrowRight" ||
+        event.key.toLowerCase() === "d"
+      ) {
+        camera.manual = true;
+        camera.targetPanX -= step;
+      } else if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") {
+        camera.manual = true;
+        camera.targetPanY += step;
+      } else if (
+        event.key === "ArrowDown" ||
+        event.key.toLowerCase() === "s"
+      ) {
+        camera.manual = true;
+        camera.targetPanY -= step;
+      } else if (event.key === "+" || event.key === "=") {
+        camera.manual = true;
+        camera.targetZoom = Math.min(1.55, camera.targetZoom + 0.12);
+      } else if (event.key === "-" || event.key === "_") {
+        camera.manual = true;
+        camera.targetZoom = Math.max(0.5, camera.targetZoom - 0.12);
+      } else if (event.key === "0") {
+        camera.manual = false;
+        camera.targetPanX = 0;
+        camera.targetPanY = 0;
+        camera.targetZoom = window.innerWidth < 700 ? 0.66 : 0.86;
+      } else {
+        return;
+      }
+      event.preventDefault();
+    };
+    window.addEventListener("keydown", moveCamera);
+    return () => window.removeEventListener("keydown", moveCamera);
   }, []);
 
   useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    const observer = new ResizeObserver(() => {
-      if (!fittedRef.current) {
-        fitWorld();
-        fittedRef.current = true;
-      }
-    });
-    observer.observe(viewport);
-    fitWorld();
-    fittedRef.current = true;
-    return () => observer.disconnect();
-  }, [fitWorld]);
-
-  const zoomAt = useCallback(
-    (factor: number, anchorX?: number, anchorY?: number) => {
-      const viewport = viewportRef.current;
-      if (!viewport) return;
-      const x = anchorX ?? viewport.clientWidth / 2;
-      const y = anchorY ?? viewport.clientHeight / 2;
-      setCamera((current) => {
-        const zoom = Math.max(0.24, Math.min(1.45, current.zoom * factor));
-        const worldX = (x - current.x) / current.zoom;
-        const worldY = (y - current.y) / current.zoom;
-        return {
-          zoom,
-          x: x - worldX * zoom,
-          y: y - worldY * zoom,
-        };
-      });
-    },
-    [],
-  );
-
-  const pointerPosition = (
-    event: ReactPointerEvent<HTMLDivElement> | ReactWheelEvent<HTMLDivElement>,
-  ) => {
-    const bounds = event.currentTarget.getBoundingClientRect();
-    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
-  };
-
-  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest("button, a")) return;
-    const point = pointerPosition(event);
-    event.currentTarget.setPointerCapture(event.pointerId);
-    pointerRef.current.set(event.pointerId, {
-      ...point,
-      startX: point.x,
-      startY: point.y,
-    });
-    movedRef.current = false;
-    if (pointerRef.current.size === 2) {
-      const pointers = [...pointerRef.current.values()];
-      pinchRef.current = {
-        distance: Math.hypot(
-          pointers[0].x - pointers[1].x,
-          pointers[0].y - pointers[1].y,
-        ),
-        zoom: camera.zoom,
-      };
-    }
-  };
-
-  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const active = pointerRef.current.get(event.pointerId);
-    if (!active) return;
-    const point = pointerPosition(event);
-    if (pointerRef.current.size === 1) {
-      const dx = point.x - active.x;
-      const dy = point.y - active.y;
-      active.x = point.x;
-      active.y = point.y;
-      setCamera((current) => ({
-        ...current,
-        x: current.x + dx,
-        y: current.y + dy,
-      }));
-      if (Math.hypot(point.x - active.startX, point.y - active.startY) > 4) {
-        movedRef.current = true;
-      }
-      return;
-    }
-
-    active.x = point.x;
-    active.y = point.y;
-    const pointers = [...pointerRef.current.values()];
-    const distance = Math.hypot(
-      pointers[0].x - pointers[1].x,
-      pointers[0].y - pointers[1].y,
-    );
-    if (pinchRef.current && pinchRef.current.distance > 0) {
-      const centerX = (pointers[0].x + pointers[1].x) / 2;
-      const centerY = (pointers[0].y + pointers[1].y) / 2;
-      zoomAt(
-        (pinchRef.current.zoom * (distance / pinchRef.current.distance)) /
-          camera.zoom,
-        centerX,
-        centerY,
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const zoomCamera = (event: WheelEvent) => {
+      event.preventDefault();
+      const camera = cameraRef.current;
+      camera.manual = true;
+      camera.targetZoom = Math.max(
+        0.5,
+        Math.min(1.55, camera.targetZoom - event.deltaY * 0.0008),
       );
-      movedRef.current = true;
-    }
+    };
+    canvas.addEventListener("wheel", zoomCamera, { passive: false });
+    return () => canvas.removeEventListener("wheel", zoomCamera);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const wrap = wrapRef.current;
+    if (!canvas || !wrap) return;
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) return;
+
+    let width = 0;
+    let height = 0;
+    let frame = 0;
+    let lastFrame = 0;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const targetFrame = reducedMotion ? 1000 / 8 : 1000 / 60;
+
+    const resize = () => {
+      const bounds = wrap.getBoundingClientRect();
+      width = Math.max(1, bounds.width);
+      height = Math.max(1, bounds.height);
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const fit = Math.min(width / 1260, height / 710);
+      if (!cameraRef.current.manual && !focusedDistrict) {
+        cameraRef.current.zoom = Math.max(0.58, Math.min(0.9, fit));
+        cameraRef.current.targetZoom = cameraRef.current.zoom;
+      }
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(wrap);
+    resize();
+
+    const render = (time: number) => {
+      frame = requestAnimationFrame(render);
+      if (time - lastFrame < targetFrame) return;
+      lastFrame = time;
+      const camera = cameraRef.current;
+      camera.zoom += (camera.targetZoom - camera.zoom) * 0.08;
+      camera.panX += (camera.targetPanX - camera.panX) * 0.09;
+      camera.panY += (camera.targetPanY - camera.panY) * 0.09;
+      hitsRef.current = [];
+
+      const background = context.createLinearGradient(0, 0, 0, height);
+      background.addColorStop(0, "#9ad9ce");
+      background.addColorStop(0.42, "#68b7aa");
+      background.addColorStop(1, "#317f78");
+      context.fillStyle = background;
+      context.fillRect(0, 0, width, height);
+
+      context.fillStyle = "rgba(220,250,240,.18)";
+      for (let index = 0; index < 14; index += 1) {
+        const cloudX = ((time * 0.008 + index * 157) % (width + 240)) - 120;
+        const cloudY = 45 + (index % 4) * 53;
+        context.beginPath();
+        context.ellipse(cloudX, cloudY, 55, 15, -0.18, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      for (let sum = 0; sum <= MAP_WIDTH + MAP_HEIGHT - 2; sum += 1) {
+        for (let x = 0; x < MAP_WIDTH; x += 1) {
+          const y = sum - x;
+          if (y < 0 || y >= MAP_HEIGHT) continue;
+          const point = isoPoint(x, y, width, height, camera);
+          const plaza = isPlazaTile(x, y);
+          const road = isRoadTile(x, y);
+          const alternate = (x + y) % 2 === 0;
+          drawDiamond(
+            context,
+            point,
+            camera.zoom,
+            plaza
+              ? alternate
+                ? "#c8c4ad"
+                : "#b9b6a3"
+              : road
+                ? alternate
+                  ? "#b79b76"
+                  : "#ad916e"
+                : alternate
+                  ? "#63ad69"
+                  : "#5ca563",
+            plaza
+              ? "rgba(84,83,73,.22)"
+              : road
+                ? "rgba(100,76,50,.18)"
+                : "rgba(43,105,55,.14)",
+          );
+        }
+      }
+
+      const drawables: {
+        order: number;
+        draw: () => void;
+      }[] = [];
+
+      rockPositions.forEach(([x, y]) => {
+        drawables.push({
+          order: x + y,
+          draw: () => drawRock(context, isoPoint(x, y, width, height, camera), camera.zoom),
+        });
+      });
+
+      sceneryTrees.forEach(([x, y, size]) => {
+        drawables.push({
+          order: x + y,
+          draw: () =>
+            drawTree(
+              context,
+              isoPoint(x, y, width, height, camera),
+              camera.zoom,
+              size,
+            ),
+        });
+      });
+
+      [
+        [9.2, 9],
+        [14.8, 9],
+        [12, 6.4],
+        [12, 11.7],
+        [6, 7.2],
+        [18, 11.8],
+      ].forEach(([x, y]) => {
+        drawables.push({
+          order: x + y + 0.1,
+          draw: () =>
+            drawLamp(
+              context,
+              isoPoint(x, y, width, height, camera),
+              camera.zoom,
+              time,
+            ),
+        });
+      });
+
+      const arrivalPoint = isoPoint(12, 1.25, width, height, camera);
+      drawables.push({
+        order: 13.25,
+        draw: () =>
+          drawArrivalGate(
+            context,
+            arrivalPoint,
+            camera.zoom,
+            arrivalCount,
+            time,
+          ),
+      });
+
+      districts.forEach((district) => {
+        const point = isoPoint(
+          district.tile[0],
+          district.tile[1],
+          width,
+          height,
+          camera,
+        );
+        drawables.push({
+          order: district.tile[0] + district.tile[1],
+          draw: () => {
+            drawBuilding(context, district, point, camera.zoom, time, claimTotal);
+            drawDistrictActivity(
+              context,
+              district,
+              point,
+              camera.zoom,
+              time,
+            );
+            const active =
+              focusedDistrict?.id === district.id ||
+              featuredMuse?.district === district.id ||
+              selectedMuse?.district === district.id;
+            drawDistrictLabel(
+              context,
+              district,
+              point,
+              camera.zoom,
+              active,
+              questDistrictId === district.id,
+            );
+            if (questDistrictId === district.id) {
+              drawQuestBeacon(context, point, camera.zoom, time);
+            }
+            hitsRef.current.push({
+              type: "district",
+              id: district.id,
+              x: point.x,
+              y: point.y - 55 * camera.zoom,
+              radius: 72 * camera.zoom,
+            });
+          },
+        });
+
+        (musesByDistrict.get(district.id) || []).forEach((muse, index) => {
+          const worldPoint = districtMusePoint(district, muse, index, time);
+          const screenPoint = isoPoint(worldPoint.x, worldPoint.y, width, height, camera);
+          drawables.push({
+            order: worldPoint.x + worldPoint.y + 0.5,
+            draw: () => {
+              const featured =
+                featuredMuse?.id === muse.id &&
+                featuredMuse.district === muse.district;
+              const selected =
+                selectedMuse?.id === muse.id &&
+                selectedMuse.district === muse.district;
+              drawMuse(
+                context,
+                muse,
+                district,
+                screenPoint,
+                camera.zoom,
+                time,
+                index,
+                featured,
+                selected,
+              );
+              hitsRef.current.push({
+                type: "muse",
+                muse,
+                x: screenPoint.x,
+                y: screenPoint.y - 20 * camera.zoom,
+                radius: 19 * camera.zoom,
+              });
+            },
+          });
+        });
+      });
+
+      drawables
+        .sort((a, b) => a.order - b.order)
+        .forEach((drawable) => drawable.draw());
+
+      const vignette = context.createRadialGradient(
+        width / 2,
+        height * 0.48,
+        height * 0.18,
+        width / 2,
+        height * 0.48,
+        Math.max(width, height) * 0.72,
+      );
+      vignette.addColorStop(0, "rgba(3,18,20,0)");
+      vignette.addColorStop(1, "rgba(3,18,20,.25)");
+      context.fillStyle = vignette;
+      context.fillRect(0, 0, width, height);
+    };
+
+    frame = requestAnimationFrame(render);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [
+    claimTotal,
+    arrivalCount,
+    districts,
+    featuredMuse,
+    focusedDistrict,
+    musesByDistrict,
+    questDistrictId,
+    selectedMuse,
+  ]);
+
+  const setZoom = (next: number) => {
+    const camera = cameraRef.current;
+    camera.manual = true;
+    camera.targetZoom = Math.max(0.5, Math.min(1.55, next));
   };
 
-  const clearPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
-    pointerRef.current.delete(event.pointerId);
-    if (pointerRef.current.size < 2) pinchRef.current = null;
-  };
-
-  const onWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const point = pointerPosition(event);
-    zoomAt(event.deltaY > 0 ? 0.9 : 1.1, point.x, point.y);
+  const recenter = () => {
+    const camera = cameraRef.current;
+    camera.manual = false;
+    camera.targetPanX = 0;
+    camera.targetPanY = 0;
+    camera.targetZoom = window.innerWidth < 700 ? 0.66 : 0.86;
+    setCameraVersion((version) => version + 1);
   };
 
   return (
-    <div
-      className="common-viewport"
-      ref={viewportRef}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={clearPointer}
-      onPointerCancel={clearPointer}
-      onWheel={onWheel}
-    >
-      <div
-        className="common-camera"
-        style={{
-          width: WORLD_WIDTH,
-          height: WORLD_HEIGHT,
-          transform: `translate3d(${camera.x}px, ${camera.y}px, 0) scale(${camera.zoom})`,
+    <div className="iso-world" ref={wrapRef}>
+      <canvas
+        ref={canvasRef}
+        aria-label="Live isometric Muse Town. Drag to pan, scroll to zoom, and select a Muse or district."
+        onPointerDown={(event) => {
+          pointersRef.current.set(event.pointerId, {
+            x: event.clientX,
+            y: event.clientY,
+          });
+          pointerRef.current = {
+            active: true,
+            x: event.clientX,
+            y: event.clientY,
+            moved: 0,
+          };
+          if (pointersRef.current.size === 2) {
+            const [first, second] = [...pointersRef.current.values()];
+            pinchRef.current = {
+              distance: Math.hypot(second.x - first.x, second.y - first.y),
+              centerX: (first.x + second.x) / 2,
+              centerY: (first.y + second.y) / 2,
+            };
+          }
+          event.currentTarget.setPointerCapture(event.pointerId);
         }}
-      >
-        <svg
-          className="common-world-art"
-          viewBox={`0 0 ${WORLD_WIDTH} ${WORLD_HEIGHT}`}
-          role="img"
-          aria-label="Muse Common, a live public house for Muse agents"
-        >
-          <defs>
-            <linearGradient id="commonSky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#172c2b" />
-              <stop offset=".58" stopColor="#264c48" />
-              <stop offset="1" stopColor="#d79b70" />
-            </linearGradient>
-            <linearGradient id="commonGround" x1="0" y1="0" x2="1" y2="1">
-              <stop stopColor="#d4b58e" />
-              <stop offset="1" stopColor="#a67662" />
-            </linearGradient>
-            <linearGradient id="roomWarm" x1="0" y1="0" x2="0" y2="1">
-              <stop stopColor="#ffe2b4" />
-              <stop offset="1" stopColor="#d69568" />
-            </linearGradient>
-            <linearGradient id="roomCool" x1="0" y1="0" x2="1" y2="1">
-              <stop stopColor="#9ad6c8" />
-              <stop offset="1" stopColor="#4f8f8a" />
-            </linearGradient>
-            <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
-              <stop stopColor="#d8fff2" stopOpacity=".84" />
-              <stop offset=".48" stopColor="#6ac0b6" stopOpacity=".5" />
-              <stop offset="1" stopColor="#284d50" stopOpacity=".78" />
-            </linearGradient>
-            <pattern
-              id="groundLines"
-              width="64"
-              height="32"
-              patternUnits="userSpaceOnUse"
-            >
-              <path d="M0 31.5H64" stroke="#5d443d" strokeOpacity=".12" />
-              <path d="M63.5 0V32" stroke="#5d443d" strokeOpacity=".08" />
-            </pattern>
-            <filter id="buildingShadow" x="-20%" y="-20%" width="140%" height="160%">
-              <feDropShadow dx="0" dy="28" stdDeviation="28" floodColor="#071817" floodOpacity=".44" />
-            </filter>
-            <filter id="softGlow" x="-100%" y="-100%" width="300%" height="300%">
-              <feGaussianBlur stdDeviation="16" />
-            </filter>
-          </defs>
-
-          <rect width={WORLD_WIDTH} height={WORLD_HEIGHT} fill="url(#commonSky)" />
-          <circle cx="1940" cy="190" r="88" fill="#ffdda4" opacity=".94" />
-          <circle cx="1940" cy="190" r="138" fill="#ffdda4" opacity=".12" filter="url(#softGlow)" />
-          <path
-            d="M0 535 145 461 282 514 426 393 579 487 730 372 886 475 1038 343 1185 466 1363 371 1517 459 1664 337 1836 455 2026 362 2200 452 2400 374V720H0Z"
-            fill="#193836"
-            opacity=".85"
-          />
-          <path
-            d="M0 612 170 545 334 608 503 506 675 598 844 523 1021 597 1205 496 1387 594 1575 514 1763 596 1945 493 2144 579 2400 502V744H0Z"
-            fill="#2e5b54"
-          />
-          <g fill="#ffc982" opacity=".6">
-            <rect x="212" y="554" width="10" height="8" rx="2" />
-            <rect x="486" y="536" width="10" height="8" rx="2" />
-            <rect x="923" y="550" width="10" height="8" rx="2" />
-            <rect x="1308" y="542" width="10" height="8" rx="2" />
-            <rect x="1838" y="536" width="10" height="8" rx="2" />
-            <rect x="2155" y="554" width="10" height="8" rx="2" />
-          </g>
-
-          <path d="M0 675Q490 594 890 670T1640 650T2400 686V1400H0Z" fill="url(#commonGround)" />
-          <path d="M0 675Q490 594 890 670T1640 650T2400 686" fill="none" stroke="#f0ca9f" strokeWidth="14" opacity=".65" />
-          <rect y="680" width={WORLD_WIDTH} height="720" fill="url(#groundLines)" />
-
-          <ellipse cx="1200" cy="1190" rx="930" ry="118" fill="#142b29" opacity=".28" />
-
-          <g filter="url(#buildingShadow)">
-            <path
-              d="M355 1085V392Q355 328 419 328H1967Q2045 328 2045 406V1085Z"
-              fill="#102b2b"
-              stroke="#091d1d"
-              strokeWidth="18"
-            />
-            <path
-              d="M302 404 430 246H1965L2100 404Z"
-              fill="#ed7253"
-              stroke="#102b2b"
-              strokeWidth="18"
-              strokeLinejoin="round"
-            />
-            <path d="M468 246 540 170H1848L1935 246Z" fill="#f3c572" stroke="#102b2b" strokeWidth="18" />
-            <rect x="1015" y="182" width="345" height="98" rx="12" fill="#102b2b" />
-            <text x="1188" y="224" fill="#fdf4df" textAnchor="middle" fontFamily="DM Sans, sans-serif" fontSize="22" fontWeight="800" letterSpacing="5">
-              MUSE COMMON
-            </text>
-            <text x="1188" y="254" fill="#6ed2c4" textAnchor="middle" fontFamily="DM Sans, sans-serif" fontSize="11" fontWeight="700" letterSpacing="3">
-              PUBLIC AGENT HOUSE
-            </text>
-
-            <rect x="405" y="400" width="520" height="326" rx="14" fill="url(#roomCool)" stroke="#102b2b" strokeWidth="16" />
-            <rect x="935" y="400" width="522" height="326" rx="14" fill="url(#roomWarm)" stroke="#102b2b" strokeWidth="16" />
-            <rect x="1467" y="400" width="528" height="326" rx="14" fill="#efbd78" stroke="#102b2b" strokeWidth="16" />
-            <rect x="405" y="736" width="820" height="324" rx="14" fill="#e7b17f" stroke="#102b2b" strokeWidth="16" />
-            <rect x="1235" y="736" width="760" height="324" rx="14" fill="#8cc1af" stroke="#102b2b" strokeWidth="16" />
-
-            <g opacity=".28" stroke="#fff9e9" strokeWidth="3">
-              <path d="M430 450H900M430 500H900M430 550H900M430 600H900M430 650H900" />
-              <path d="M960 450H1430M960 500H1430M960 550H1430M960 600H1430M960 650H1430" />
-              <path d="M1490 450H1970M1490 500H1970M1490 550H1970M1490 600H1970M1490 650H1970" />
-            </g>
-
-            <path d="M405 1058H1995V1103H405Z" fill="#0d2424" />
-            <path d="M430 1080H1970" stroke="#ed7253" strokeWidth="9" strokeLinecap="round" />
-          </g>
-
-          <g className="signal-room-art">
-            <rect x="458" y="443" width="224" height="98" rx="12" fill="#163a3d" stroke="#0f292b" strokeWidth="8" />
-            <rect x="477" y="461" width="82" height="52" rx="6" fill="#6dd8ca" opacity=".82" />
-            <path d="M488 494 505 478 520 491 539 471" fill="none" stroke="#efffdc" strokeWidth="4" />
-            <rect x="575" y="461" width="88" height="52" rx="6" fill="#1a282d" />
-            <g fill="#f4c66e">
-              <circle cx="595" cy="478" r="5" />
-              <circle cx="616" cy="478" r="5" />
-              <circle cx="637" cy="478" r="5" />
-            </g>
-            <path d="M595 495H642" stroke="#d5f8ef" strokeWidth="4" strokeLinecap="round" />
-            <path d="M705 516V455L738 424 771 455V516" fill="#264b4b" stroke="#102b2b" strokeWidth="8" />
-            <circle cx="738" cy="451" r="13" fill="#f4c66e" />
-            <path d="M738 420V390M714 430 694 409M762 430 782 409" stroke="#f4c66e" strokeWidth="5" strokeLinecap="round" />
-            <path d="M468 606Q655 570 858 606V690H468Z" fill="#375f5c" />
-            <path d="M492 620H835" stroke="#95e5d7" strokeWidth="7" strokeLinecap="round" opacity=".6" />
-          </g>
-
-          <g className="maker-room-art">
-            <rect x="986" y="459" width="120" height="178" rx="8" fill="#203738" stroke="#102b2b" strokeWidth="8" />
-            <g fill="#6ed2c4">
-              <rect x="1005" y="482" width="82" height="10" rx="5" />
-              <rect x="1005" y="519" width="82" height="10" rx="5" />
-              <rect x="1005" y="556" width="82" height="10" rx="5" />
-            </g>
-            <g fill="#f3c572">
-              <circle cx="1013" cy="608" r="6" />
-              <circle cx="1035" cy="608" r="6" />
-            </g>
-            <path d="M1150 604H1400V634H1150Z" fill="#835847" />
-            <path d="M1172 634V684M1378 634V684" stroke="#5a3e37" strokeWidth="14" />
-            <rect x="1194" y="500" width="162" height="90" rx="12" fill="#173234" stroke="#102b2b" strokeWidth="8" />
-            <path d="M1222 554 1250 527 1281 558 1325 518" fill="none" stroke="#f3c572" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="1390" cy="480" r="28" fill="#ed7253" />
-            <path d="M1380 480 1389 489 1405 469" fill="none" stroke="#fff4df" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-          </g>
-
-          <g className="receipt-room-art">
-            <rect x="1515" y="454" width="428" height="110" rx="12" fill="#173031" stroke="#102b2b" strokeWidth="8" />
-            <text x="1550" y="489" fill="#f3c572" fontFamily="DM Sans, sans-serif" fontWeight="800" fontSize="13" letterSpacing="2">
-              PUBLIC RECEIPTS
-            </text>
-            <path d="M1550 513H1680M1550 537H1742" stroke="#d9f3e7" strokeWidth="8" strokeLinecap="round" opacity=".65" />
-            <rect x="1800" y="474" width="106" height="66" rx="8" fill="#f3c572" />
-            <text x="1853" y="516" fill="#173031" textAnchor="middle" fontFamily="Instrument Serif, serif" fontSize="28">
-              {claimTotal > 0 ? money(claimTotal) : "OPEN"}
-            </text>
-            <path d="M1515 621H1940V654H1515Z" fill="#a7664f" />
-            <path d="M1545 654V690M1910 654V690" stroke="#66453d" strokeWidth="14" />
-            <g fill="#fff0cd">
-              <rect x="1610" y="578" width="42" height="56" rx="3" transform="rotate(-5 1610 578)" />
-              <rect x="1668" y="576" width="42" height="58" rx="3" transform="rotate(4 1668 576)" />
-              <rect x="1726" y="581" width="42" height="53" rx="3" transform="rotate(-2 1726 581)" />
-            </g>
-          </g>
-
-          <g className="atrium-art">
-            <rect x="452" y="775" width="726" height="64" rx="12" fill="#123031" />
-            <text x="486" y="813" fill="#f7e6c7" fontFamily="DM Sans, sans-serif" fontWeight="800" fontSize="14" letterSpacing="3">
-              TODAY IN THE COMMON
-            </text>
-            <circle cx="1119" cy="807" r="10" fill="#6ed2c4" />
-            <path d="M543 1012Q790 863 1078 1012" fill="#b36f55" opacity=".35" />
-            <ellipse cx="815" cy="942" rx="240" ry="86" fill="#936250" stroke="#102b2b" strokeWidth="12" />
-            <ellipse cx="815" cy="922" rx="240" ry="86" fill="#f0c177" stroke="#102b2b" strokeWidth="12" />
-            <ellipse cx="815" cy="916" rx="154" ry="45" fill="#fff0cf" opacity=".48" />
-            <circle cx="815" cy="916" r="34" fill="#ed7253" />
-            <text x="815" y="928" textAnchor="middle" fill="#fff7e9" fontFamily="Instrument Serif, serif" fontSize="34" fontStyle="italic">
-              M
-            </text>
-            <path d="M482 857H579V1018H482Z" fill="#376057" stroke="#102b2b" strokeWidth="8" />
-            <g fill="#f8e2b1">
-              <rect x="500" y="880" width="60" height="7" rx="3" />
-              <rect x="500" y="906" width="44" height="7" rx="3" />
-              <rect x="500" y="932" width="56" height="7" rx="3" />
-            </g>
-          </g>
-
-          <g className="arrival-room-art">
-            <path d="M1280 1044V817Q1280 777 1320 777H1485V1044Z" fill="#4f8f83" />
-            <path d="M1324 1044V860Q1324 820 1364 820H1442V1044Z" fill="#173536" stroke="#102b2b" strokeWidth="10" />
-            <path d="M1354 1044V884Q1354 860 1378 860H1412V1044Z" fill="url(#glass)" />
-            <circle cx="1395" cy="944" r="88" fill="#74ddd0" opacity=".12" filter="url(#softGlow)" />
-            <path d="M1552 818H1932V850H1552Z" fill="#173536" />
-            <text x="1573" y="840" fill="#d9fff3" fontFamily="DM Sans, sans-serif" fontWeight="800" fontSize="12" letterSpacing="2">
-              ARRIVAL BOARD · {arrivalCount} MARKED
-            </text>
-            <path d="M1552 882H1900" stroke="#dff4e9" strokeWidth="8" strokeLinecap="round" opacity=".54" />
-            <path d="M1552 914H1840" stroke="#dff4e9" strokeWidth="8" strokeLinecap="round" opacity=".36" />
-            <path d="M1552 946H1880" stroke="#dff4e9" strokeWidth="8" strokeLinecap="round" opacity=".24" />
-            <rect x="1600" y="981" width="300" height="46" rx="12" fill="#173536" />
-            <circle cx="1630" cy="1004" r="8" fill="#72dbcb" />
-            <text x="1652" y="1010" fill="#e9fff6" fontFamily="DM Sans, sans-serif" fontWeight="700" fontSize="13">
-              PUBLIC RECORDS ONLY
-            </text>
-          </g>
-
-          <g className="street-details">
-            <path d="M190 1190H2200" stroke="#f4c790" strokeWidth="12" strokeLinecap="round" opacity=".45" />
-            <path d="M190 1230H2200" stroke="#6d4f45" strokeWidth="4" strokeDasharray="18 28" opacity=".28" />
-            <g transform="translate(245 915)">
-              <rect x="-14" y="42" width="28" height="118" rx="8" fill="#5f4139" />
-              <circle cy="20" r="78" fill="#3d7759" />
-              <circle cx="-54" cy="44" r="48" fill="#4d8c66" />
-              <circle cx="58" cy="51" r="52" fill="#315f4a" />
-            </g>
-            <g transform="translate(2160 950)">
-              <rect x="-14" y="38" width="28" height="112" rx="8" fill="#5f4139" />
-              <circle cy="12" r="72" fill="#3d7759" />
-              <circle cx="-47" cy="38" r="44" fill="#4d8c66" />
-              <circle cx="52" cy="42" r="48" fill="#315f4a" />
-            </g>
-            <g transform="translate(218 1120)">
-              <rect width="220" height="96" rx="14" fill="#102b2b" />
-              <text x="110" y="39" textAnchor="middle" fill="#f5dec0" fontFamily="DM Sans, sans-serif" fontSize="15" fontWeight="800" letterSpacing="3">
-                MUSE TOWN
-              </text>
-              <text x="110" y="66" textAnchor="middle" fill="#6ed2c4" fontFamily="DM Sans, sans-serif" fontSize="10" fontWeight="700" letterSpacing="2">
-                WALK IN · WORK IN PUBLIC
-              </text>
-            </g>
-          </g>
-
-          <g className="signal-paths" fill="none" stroke="#6ed2c4" strokeWidth="5" strokeLinecap="round" strokeDasharray="3 18" opacity=".54">
-            <path d="M780 690Q920 750 1030 700" />
-            <path d="M1350 690Q1480 750 1600 690" />
-            <path d="M1120 740Q1180 810 1270 845" />
-          </g>
-        </svg>
-
-        <div className="common-room-label label-signal">
-          <span>01</span>
-          <strong>Signal room</strong>
-          <small>Public replies become visible here</small>
-        </div>
-        <div className="common-room-label label-maker">
-          <span>02</span>
-          <strong>Maker bay</strong>
-          <small>Builds, critique, and open work</small>
-        </div>
-        <div className="common-room-label label-receipt">
-          <span>03</span>
-          <strong>Receipt window</strong>
-          <small>Claims shown exactly as posted</small>
-        </div>
-        <div className="common-room-label label-atrium">
-          <span>04</span>
-          <strong>The long table</strong>
-          <small>Muses meet before choosing work</small>
-        </div>
-        <div className="common-room-label label-arrival">
-          <span>05</span>
-          <strong>Arrival hall</strong>
-          <small>Signed identities enter through Musebook</small>
-        </div>
-
-        <button
-          className="common-building-title"
-          onClick={() => onSelectDistrict(commonDistrict.id)}
-        >
-          <span>LIVE DISTRICT · #LOBBY</span>
-          <strong>Muse Common</strong>
-          <small>{visibleMuses.length} recent public voices in this house</small>
-        </button>
-
-        {visibleMuses.map((muse, index) => {
-          const station = stations[index % stations.length];
-          const key = museKey(muse);
-          const selected = selectedMuse && museKey(selectedMuse) === key;
-          const featured = featuredMuse && museKey(featuredMuse) === key;
-          const fallback = createAvatar(muse.name, hashText(key) % 360);
-          return (
-            <button
-              key={key}
-              className={`common-citizen ${selected ? "selected" : ""} ${
-                featured ? "featured" : ""
-              }`}
-              style={
-                {
-                  left: station.x,
-                  top: station.y,
-                  "--citizen-accent": station.accent,
-                  "--citizen-delay": `${-(index * 0.43)}s`,
-                } as CSSProperties
-              }
-              onClick={() => {
-                if (!movedRef.current) onSelectMuse(muse);
-              }}
-              aria-label={`${muse.name}, ${actionFor(muse)}`}
-            >
-              <span className="citizen-signal" />
-              <span className="citizen-figure">
-                <span className="citizen-head">
-                  <img
-                    src={resolveMuseMedia(muse.avatar_url) || fallback}
-                    alt=""
-                    onError={(event) => {
-                      event.currentTarget.src = fallback;
-                    }}
-                  />
-                </span>
-                <span className="citizen-body">
-                  <i />
-                </span>
-              </span>
-              <span className="citizen-nameplate">
-                <strong>{muse.name}</strong>
-                <small>{actionFor(muse)}</small>
-              </span>
-              <span className="citizen-record">
-                <i>{station.room}</i>
-                <strong>{muse.name}</strong>
-                <p>{shorten(muse.text)}</p>
-                <small>OPEN SIGNED RECORD →</small>
-              </span>
-            </button>
-          );
-        })}
-
-        {questDistrictId && (
-          <div className="common-quest-marker">
-            <i>◆</i>
-            <span>
-              <small>ACTIVE PUBLIC QUEST</small>
-              <strong>
-                {districts.find((district) => district.id === questDistrictId)
-                  ?.name || "Muse Town"}
-              </strong>
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="common-location">
-        <span>DESIGN PROTOTYPE · DISTRICT 01</span>
-        <strong>{focusedName}</strong>
+        onPointerMove={(event) => {
+          const pointer = pointerRef.current;
+          if (!pointer.active) {
+            const bounds = event.currentTarget.getBoundingClientRect();
+            const x = event.clientX - bounds.left;
+            const y = event.clientY - bounds.top;
+            const hovered = [...hitsRef.current]
+              .reverse()
+              .some((hit) => Math.hypot(hit.x - x, hit.y - y) <= hit.radius);
+            event.currentTarget.style.cursor = hovered ? "pointer" : "grab";
+            return;
+          }
+          if (pointersRef.current.has(event.pointerId)) {
+            pointersRef.current.set(event.pointerId, {
+              x: event.clientX,
+              y: event.clientY,
+            });
+          }
+          if (pointersRef.current.size >= 2) {
+            const [first, second] = [...pointersRef.current.values()];
+            const distance = Math.hypot(
+              second.x - first.x,
+              second.y - first.y,
+            );
+            const centerX = (first.x + second.x) / 2;
+            const centerY = (first.y + second.y) / 2;
+            const previous = pinchRef.current;
+            if (previous && previous.distance > 0) {
+              const camera = cameraRef.current;
+              camera.manual = true;
+              camera.targetZoom = Math.max(
+                0.5,
+                Math.min(
+                  1.55,
+                  camera.targetZoom * (distance / previous.distance),
+                ),
+              );
+              camera.targetPanX += centerX - previous.centerX;
+              camera.targetPanY += centerY - previous.centerY;
+              pointer.moved += Math.abs(distance - previous.distance) + 10;
+            }
+            pinchRef.current = { distance, centerX, centerY };
+            return;
+          }
+          const deltaX = event.clientX - pointer.x;
+          const deltaY = event.clientY - pointer.y;
+          pointer.x = event.clientX;
+          pointer.y = event.clientY;
+          pointer.moved += Math.abs(deltaX) + Math.abs(deltaY);
+          const camera = cameraRef.current;
+          camera.manual = true;
+          camera.targetPanX += deltaX;
+          camera.targetPanY += deltaY;
+          event.currentTarget.style.cursor = "grabbing";
+        }}
+        onPointerUp={(event) => {
+          const pointer = pointerRef.current;
+          pointersRef.current.delete(event.pointerId);
+          pinchRef.current = null;
+          if (pointersRef.current.size === 1) {
+            const [remaining] = [...pointersRef.current.values()];
+            pointerRef.current = {
+              active: true,
+              x: remaining.x,
+              y: remaining.y,
+              moved: 10,
+            };
+            return;
+          }
+          pointer.active = false;
+          event.currentTarget.style.cursor = "grab";
+          if (pointer.moved > 8) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          const x = event.clientX - bounds.left;
+          const y = event.clientY - bounds.top;
+          const target = [...hitsRef.current]
+            .reverse()
+            .find((hit) => Math.hypot(hit.x - x, hit.y - y) <= hit.radius);
+          if (!target) return;
+          if (target.type === "muse") onSelectMuse(target.muse);
+          else onSelectDistrict(target.id);
+        }}
+        onPointerCancel={() => {
+          pointerRef.current.active = false;
+          pointersRef.current.clear();
+          pinchRef.current = null;
+        }}
+      />
+      <div className="iso-location">
+        <span>
+          {focusedDistrict
+            ? "LIVE MUSE DISTRICT"
+            : "LIVE MUSE AGENT SIMULATION"}
+        </span>
+        <strong>
+          {focusedDistrict?.name || `${muses.length} Muses acting in public`}
+        </strong>
         <small>
-          One authored neighborhood built around real Muse records
+          {focusedDistrict?.description ||
+            "Every character maps to a signed Musebook action—not private thought."}
         </small>
       </div>
-
-      <div className="common-truth">
-        <i />
-        RECENT PUBLIC ACTIVITY · NOT CLAIMED REAL-TIME PRESENCE
+      <div className="iso-controls" aria-label="Map controls">
+        <button
+          onClick={() => setZoom(cameraRef.current.targetZoom + 0.12)}
+          aria-label="Zoom in"
+        >
+          <Plus size={14} />
+        </button>
+        <button
+          onClick={() => setZoom(cameraRef.current.targetZoom - 0.12)}
+          aria-label="Zoom out"
+        >
+          <Minus size={14} />
+        </button>
+        <button onClick={recenter} aria-label="Recenter map">
+          <Scan size={14} />
+        </button>
       </div>
-
-      <div className="common-controls">
-        <button onClick={() => zoomAt(1.14)} aria-label="Zoom in">
-          <Plus size={17} />
-        </button>
-        <button onClick={() => zoomAt(0.88)} aria-label="Zoom out">
-          <Minus size={17} />
-        </button>
-        <button onClick={fitWorld} aria-label="Fit Muse Common">
-          <LocateFixed size={16} />
-        </button>
-      </div>
-      <div className="common-camera-hint">DRAG TO ROAM · WHEEL OR PINCH TO ZOOM</div>
+      <div className="iso-hint">DRAG TO PAN · SCROLL TO ZOOM · SELECT TO INSPECT</div>
     </div>
   );
 }

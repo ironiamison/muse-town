@@ -10,9 +10,11 @@ import {
   Eye,
   Fingerprint,
   Focus,
+  MapPin,
   MessageCircle,
   Radio,
   RefreshCw,
+  Reply,
   Store,
   Users,
   Vote,
@@ -359,7 +361,6 @@ function WorldExperience({
   const [missions, setMissions] = useState<TownMission[]>([]);
   const [invitationOpen, setInvitationOpen] = useState(false);
   const [worldPanel, setWorldPanel] = useState<WorldPanel | null>(null);
-  const [ledgerOpen, setLedgerOpen] = useState(false);
   const [activeMissionId, setActiveMissionId] = useState<string | null>(() =>
     window.localStorage.getItem("musetown.active-mission"),
   );
@@ -494,6 +495,9 @@ function WorldExperience({
     .map((claim) => parseDollarClaim(claim.text))
     .filter((amount): amount is number => amount !== null && amount > 0);
   const claimTotal = cashClaims.reduce((total, amount) => total + amount, 0);
+  const featuredDistrict = districts.find(
+    (district) => district.id === featuredMuse?.district,
+  );
 
   const observeMuse = (muse: WorldMuse) => {
     setSelectedMuse(muse);
@@ -569,13 +573,6 @@ function WorldExperience({
             {touring ? "Following live" : "Start live tour"}
           </button>
           <button
-            className={ledgerOpen ? "active" : ""}
-            onClick={() => setLedgerOpen((open) => !open)}
-          >
-            <Eye size={14} />
-            Live signals
-          </button>
-          <button
             className={invitationOpen ? "active" : ""}
             onClick={() => setInvitationOpen(true)}
           >
@@ -621,7 +618,54 @@ function WorldExperience({
         onFocusDistrict={focusDistrict}
       />
 
-      {ledgerOpen && <aside className="activity-ledger">
+      <section className="broadcast-card">
+        <div className="broadcast-kicker">
+          <span>
+            <i /> LIVE MUSE SIGNAL
+          </span>
+          <b>
+            {String(
+              (broadcastIndex % Math.max(liveEvents.length, 1)) + 1,
+            ).padStart(2, "0")}{" "}
+            / {String(liveEvents.length).padStart(2, "0")}
+          </b>
+        </div>
+        {featuredMuse && (
+          <>
+            <div className="broadcast-person">
+              <AvatarImage muse={featuredMuse} />
+              <div>
+                <p>
+                  <strong>{featuredMuse.name}</strong> is{" "}
+                  {activityFor(featuredMuse)}
+                </p>
+                <span>
+                  <MapPin size={11} />
+                  {featuredDistrict?.name} · {timeAgo(featuredMuse.created_at)} ago
+                </span>
+              </div>
+            </div>
+            <blockquote>{shorten(featuredMuse.text, 175)}</blockquote>
+            <div className="broadcast-evidence">
+              <span>
+                {featuredMuse.parent_post_id ? (
+                  <Reply size={12} />
+                ) : (
+                  <MessageCircle size={12} />
+                )}
+                {featuredMuse.parent_post_id
+                  ? "public reply"
+                  : `${featuredMuse.reply_count || 0} replies`}
+              </span>
+              <button onClick={() => observeMuse(featuredMuse)}>
+                Inspect record <ArrowUpRight size={12} />
+              </button>
+            </div>
+          </>
+        )}
+      </section>
+
+      <aside className="activity-ledger">
         <div className="ledger-heading">
           <div>
             <span>SIGNED MUSE ACTIVITY</span>
@@ -648,7 +692,7 @@ function WorldExperience({
           <Eye size={11} />
           Movement visualizes recent public activity—not private thoughts.
         </p>
-      </aside>}
+      </aside>
 
       <nav className="town-districts" aria-label="Town districts">
         {districts.map((district) => {
