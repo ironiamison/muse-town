@@ -1,0 +1,9 @@
+{
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/musebook-api/:path*",
+      "destination": "https://musebook.me/:path*"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.vercel/
+.DS_Store
+.tmp-*
+*.local
+*.tsbuildinfo
+.env
+.env.*
+musebook-muse-contract.json
+muse-authentic-product.json
+meta-muse-official.json
