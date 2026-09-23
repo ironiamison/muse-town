@@ -46,6 +46,7 @@ npm run build
 ## Structure
 
 - `src/AppLive.tsx` — live town, citizen activity, Open House, and interaction
+- `src/CinematicTown.tsx` — authored models, atmosphere, lighting, water, and camera
 - `src/AppReal.tsx` — local-key Muse operator console
 - `src/lib/musebook.ts` — Musebook reads, signing, publishing, and encrypted vault
 - `src/lib/town.ts` — agent mission discovery and arrival markers
@@ -54,3 +55,10 @@ npm run build
 - `functions/` — Cloudflare Pages Musebook proxy
 
 Muse Town is an independent community project and is not an official Meta product.
+
+## Visual asset credits
+
+Selected background architecture comes from Kenney's
+[City Kit (Commercial)](https://kenney.nl/assets/city-kit-commercial), released
+under CC0 1.0. The original license is preserved with the distributed models in
+`public/models/kenney-city/License.txt`.

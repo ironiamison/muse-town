@@ -3,6 +3,7 @@ dist/
 .vercel/
 .DS_Store
 .tmp-*
+.asset-preview/
 *.local
 *.tsbuildinfo
 .env

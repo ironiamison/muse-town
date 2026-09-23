@@ -34,6 +34,7 @@ import {
 } from "react";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
+import CinematicTown from "./CinematicTown";
 import {
   createAvatar,
   getLatest,
@@ -1036,9 +1037,9 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
   const sync = useCallback(async () => {
     setNetwork((state) => (state === "offline" ? "connecting" : state));
     try {
+      const residentsPromise = getMuses().catch(() => [] as MuseResident[]);
       const [
         feeds,
-        residents,
         liveStats,
         economy,
         townSearch,
@@ -1051,33 +1052,23 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
             posts: await getLatest(district.id),
           })),
         ),
-        getMuses(),
         getStats(),
         searchTown("🏆", "musemoneychallenge"),
         searchTown("musetown"),
         searchTown("musetown.world"),
         getTownMissions(),
       ]);
-      const residentMap = new Map(
-        residents.map((resident) => [resident.muse_id, resident]),
-      );
       const toWorldMuse = (post: MusePost): WorldMuse => ({
         ...post,
         district: districts.some((district) => district.id === post.channel)
           ? post.channel
           : "lobby",
-        avatar_url:
-          post.avatar_url || residentMap.get(post.muse_id || "")?.avatar_url,
-        resident: residentMap.get(post.muse_id || ""),
       });
       setWorldMuses(
         feeds.flatMap(({ district, posts: districtPosts }) =>
           districtPosts.map((post) => ({
             ...post,
             district,
-            avatar_url:
-              post.avatar_url || residentMap.get(post.muse_id || "")?.avatar_url,
-            resident: residentMap.get(post.muse_id || ""),
           })),
         ),
       );
@@ -1092,6 +1083,24 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
       setMissions(missionDocument.missions);
       setNetwork("live");
       setLastSync(new Date());
+      void residentsPromise
+        .then((residentDirectory) => {
+          const residentMap = new Map(
+            residentDirectory.map((resident) => [resident.muse_id, resident]),
+          );
+          const enrich = (muse: WorldMuse): WorldMuse => {
+            const resident = residentMap.get(muse.muse_id || "");
+            return {
+              ...muse,
+              avatar_url: muse.avatar_url || resident?.avatar_url,
+              resident,
+            };
+          };
+          setWorldMuses((current) => current.map(enrich));
+          setTownVoices((current) => current.map(enrich));
+          setArrivals((current) => current.map(enrich));
+        })
+        .catch(() => undefined);
     } catch {
       setNetwork("offline");
     }
@@ -1176,19 +1185,23 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
   };
 
   return (
-    <main className="live-world-app">
+    <main className="live-world-app cinematic-town">
       <div className="town-canvas">
         <Canvas
-          dpr={[1, 1.65]}
+          dpr={[1, 1.5]}
+          frameloop="demand"
           shadows
-          camera={{ position: [8.9, 7.1, 9.6], fov: 39, near: 0.1, far: 100 }}
+          camera={{ position: [10.8, 8.2, 12.4], fov: 34, near: 0.1, far: 100 }}
           gl={{
             antialias: true,
             toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.02,
+            toneMappingExposure: 1.08,
+            powerPreference: "high-performance",
+            preserveDrawingBuffer: navigator.webdriver,
           }}
         >
-          <TownScene
+          <CinematicTown
+            districts={districts}
             muses={worldCitizens}
             arrivals={arrivals}
             focusedDistrict={focusedDistrict}
@@ -1201,6 +1214,7 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
           />
         </Canvas>
       </div>
+      <div className="cinematic-atmosphere" />
 
       <header className="town-header">
         <button className="town-brand" onClick={resumeTour}>
