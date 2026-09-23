@@ -502,6 +502,20 @@
   line-height: 1.65;
 }
 
+.staged-quest {
+  max-height: 170px;
+  overflow: auto;
+  margin: 15px 0 12px;
+  padding: 13px;
+  color: rgba(221, 255, 246, 0.76);
+  border: 1px solid rgba(119, 239, 176, 0.17);
+  background: rgba(7, 14, 26, 0.7);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 8px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
 .workspace-head {
   display: flex;
   align-items: center;

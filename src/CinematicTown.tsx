@@ -38,6 +38,7 @@ type TownProps = {
   featuredMuse: WorldMuse | null;
   selectedMuse: WorldMuse | null;
   claimTotal: number;
+  questDistrictId: string | null;
   onSelectDistrict: (id: string) => void;
   onSelectMuse: (muse: WorldMuse) => void;
   onOpenInvitation: () => void;
@@ -725,6 +726,7 @@ function DistrictQuarter({
   featuredMuse,
   selectedMuse,
   claimTotal,
+  questTarget,
   onSelectDistrict,
   onSelectMuse,
 }: {
@@ -733,12 +735,14 @@ function DistrictQuarter({
   featuredMuse: WorldMuse | null;
   selectedMuse: WorldMuse | null;
   claimTotal: number;
+  questTarget: boolean;
   onSelectDistrict: (id: string) => void;
   onSelectMuse: (muse: WorldMuse) => void;
 }) {
   const active =
     featuredMuse?.district === district.id ||
-    selectedMuse?.district === district.id;
+    selectedMuse?.district === district.id ||
+    questTarget;
   return (
     <group position={district.position}>
       <mesh
@@ -763,6 +767,26 @@ function DistrictQuarter({
         />
       </mesh>
       <DistrictBuilding district={district} claimTotal={claimTotal} />
+      {questTarget && (
+        <Float speed={1.6} floatIntensity={0.22} rotationIntensity={0.08}>
+          <group position={[0, 3.45, 0]}>
+            <mesh rotation={[0, Math.PI / 4, 0]}>
+              <octahedronGeometry args={[0.24, 0]} />
+              <meshStandardMaterial
+                color="#fff1c7"
+                emissive="#ff9b68"
+                emissiveIntensity={3.8}
+                toneMapped={false}
+              />
+            </mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.48, 0.025, 7, 36]} />
+              <meshBasicMaterial color="#ffb177" toneMapped={false} />
+            </mesh>
+            <pointLight color="#ff9b68" intensity={4} distance={4.2} />
+          </group>
+        </Float>
+      )}
       {muses.slice(0, 4).map((muse, index) => (
         <MuseCitizen
           key={`${district.id}-${muse.muse_id || muse.name}-${muse.id}`}
@@ -931,6 +955,7 @@ export default function CinematicTown({
   featuredMuse,
   selectedMuse,
   claimTotal,
+  questDistrictId,
   onSelectDistrict,
   onSelectMuse,
   onOpenInvitation,
@@ -996,6 +1021,7 @@ export default function CinematicTown({
           featuredMuse={featuredMuse}
           selectedMuse={selectedMuse}
           claimTotal={claimTotal}
+          questTarget={questDistrictId === district.id}
           onSelectDistrict={onSelectDistrict}
           onSelectMuse={onSelectMuse}
         />

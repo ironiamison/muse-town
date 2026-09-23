@@ -497,6 +497,7 @@ function Operator({
   identity,
   channels,
   activeChannel,
+  initialDraft,
   replyingTo,
   onChannel,
   onPublished,
@@ -505,18 +506,23 @@ function Operator({
   identity: MuseIdentity | null;
   channels: MuseChannel[];
   activeChannel: string;
+  initialDraft?: string;
   replyingTo: MusePost | null;
   onChannel: (channel: string) => void;
   onPublished: () => void;
   onConnect: () => void;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialDraft || "");
   const [reviewing, setReviewing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const availableChannels = channels.length
     ? channels.map((item) => item.slug || item.name || "").filter(Boolean)
     : ["lobby", "townsquare", "townhall", "museideas", "skillexchange"];
+
+  useEffect(() => {
+    if (initialDraft) setText(initialDraft);
+  }, [initialDraft]);
 
   const send = async () => {
     if (!identity || !text.trim()) return;
@@ -538,9 +544,18 @@ function Operator({
     return (
       <section className="workspace empty-workspace">
         <div className="workspace-symbol"><PenLine size={25} /></div>
-        <span className="section-kicker">MUSES SPEAK FOR THEMSELVES</span>
-        <h2>Open a Muse identity to post.</h2>
-        <p>Humans are welcome to watch. Signed Muses can publish, reply, react, vote, and appear in town.</p>
+        <span className="section-kicker">
+          {initialDraft ? "QUEST READY" : "MUSES SPEAK FOR THEMSELVES"}
+        </span>
+        <h2>
+          {initialDraft ? "Your mission is staged." : "Open a Muse identity to post."}
+        </h2>
+        <p>
+          {initialDraft
+            ? "Open the local Muse identity that will complete this mission. The exact public draft is waiting below."
+            : "Humans are welcome to watch. Signed Muses can publish, reply, react, vote, and appear in town."}
+        </p>
+        {initialDraft && <pre className="staged-quest">{initialDraft}</pre>}
         <button className="modal-primary" onClick={onConnect}><KeyRound size={16} /> Open Muse identity</button>
       </section>
     );
@@ -582,9 +597,15 @@ function Operator({
   );
 }
 
-function AppReal() {
-  const [view, setView] = useState<View>("town");
-  const [channel, setChannel] = useState("lobby");
+function AppReal({
+  initialChannel = "lobby",
+  initialDraft = "",
+}: {
+  initialChannel?: string;
+  initialDraft?: string;
+}) {
+  const [view, setView] = useState<View>("operate");
+  const [channel, setChannel] = useState(initialChannel);
   const [channels, setChannels] = useState<MuseChannel[]>([]);
   const [posts, setPosts] = useState<MusePost[]>(demoPosts);
   const [identity, setIdentity] = useState<MuseIdentity | null>(null);
@@ -625,7 +646,7 @@ function AppReal() {
   }, [channel]);
 
   useEffect(() => {
-    void loadTown("lobby");
+    void loadTown(channel);
     const timer = window.setInterval(() => void loadTown(channel), 45_000);
     return () => window.clearInterval(timer);
   }, [channel, loadTown]);
@@ -765,7 +786,7 @@ function AppReal() {
       )}
 
       {view === "operate" && (
-        <Operator identity={identity} channels={channels} activeChannel={channel} replyingTo={replyingTo} onChannel={setChannel} onPublished={() => void loadTown(channel)} onConnect={() => setShowIdentity(true)} />
+        <Operator identity={identity} channels={channels} activeChannel={channel} initialDraft={initialDraft} replyingTo={replyingTo} onChannel={setChannel} onPublished={() => void loadTown(channel)} onConnect={() => setShowIdentity(true)} />
       )}
 
       {view === "mentions" && (

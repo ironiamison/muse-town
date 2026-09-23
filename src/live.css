@@ -1958,3 +1958,678 @@
     top: 70px;
   }
 }
+
+/* Playable world systems */
+
+.world-dock {
+  position: absolute;
+  z-index: 32;
+  top: 91px;
+  left: 22px;
+  width: 76px;
+  display: grid;
+  gap: 4px;
+}
+
+.world-dock button {
+  position: relative;
+  min-height: 55px;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 7px;
+  border: 1px solid rgba(176, 211, 211, 0.14);
+  border-radius: 4px;
+  color: rgba(226, 239, 236, 0.52);
+  background: linear-gradient(135deg, rgba(10, 23, 36, 0.9), rgba(5, 13, 22, 0.82));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(15px) saturate(130%);
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.world-dock button:hover,
+.world-dock button.active {
+  color: #fff;
+  border-color: rgba(101, 214, 210, 0.47);
+  background: linear-gradient(135deg, rgba(19, 46, 59, 0.95), rgba(7, 19, 31, 0.9));
+  transform: translateX(2px);
+}
+
+.world-dock button.active {
+  box-shadow: inset 2px 0 #65d6d2, 0 12px 32px rgba(0, 0, 0, 0.27);
+}
+
+.world-dock button > span {
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.world-dock button > b {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  min-width: 13px;
+  color: rgba(197, 220, 218, 0.42);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.world-console {
+  position: absolute;
+  z-index: 31;
+  top: 88px;
+  bottom: 98px;
+  left: 111px;
+  width: 425px;
+  overflow: hidden;
+  color: #eef4f2;
+  border: 1px solid rgba(176, 211, 211, 0.18);
+  border-radius: 5px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(101, 214, 210, 0.08), transparent 33%),
+    linear-gradient(145deg, rgba(12, 26, 39, 0.98), rgba(5, 14, 23, 0.96));
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.47);
+  backdrop-filter: blur(24px) saturate(135%);
+  animation: worldConsoleIn 200ms ease both;
+}
+
+@keyframes worldConsoleIn {
+  from {
+    opacity: 0;
+    transform: translateX(-9px);
+  }
+}
+
+.world-console > header {
+  height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 0 18px;
+  border-bottom: 1px solid rgba(197, 220, 218, 0.11);
+  background: rgba(3, 10, 17, 0.3);
+}
+
+.world-console > header div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.world-console > header span {
+  color: #65d6d2;
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.world-console > header h2 {
+  margin: 0;
+  color: #f3f5ef;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 21px;
+  font-weight: 400;
+}
+
+.world-console > header button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(197, 220, 218, 0.14);
+  color: rgba(238, 244, 242, 0.58);
+  background: transparent;
+  cursor: pointer;
+}
+
+.console-content {
+  height: calc(100% - 66px);
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+
+.quest-trail {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  color: rgba(197, 220, 218, 0.5);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  letter-spacing: 0.07em;
+}
+
+.quest-trail span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.quest-trail i {
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  color: #07101c;
+  border-radius: 50%;
+  background: #65d6d2;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.quest-trail em {
+  height: 1px;
+  flex: 1;
+  margin: 0 7px;
+  background: rgba(197, 220, 218, 0.14);
+}
+
+.quest-list {
+  display: grid;
+  gap: 7px;
+}
+
+.quest-list > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 26px 1fr 14px;
+  gap: 9px;
+  padding: 12px 11px;
+  border: 1px solid rgba(197, 220, 218, 0.1);
+  color: #eef4f2;
+  background: rgba(16, 35, 49, 0.46);
+  text-align: left;
+  cursor: pointer;
+  transition: 150ms ease;
+}
+
+.quest-list > button:hover,
+.quest-list > button.active {
+  border-color: rgba(255, 155, 104, 0.42);
+  background: rgba(255, 155, 104, 0.065);
+  transform: translateX(2px);
+}
+
+.quest-list > button > b {
+  color: #ff9b68;
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 7px;
+}
+
+.quest-list > button > span {
+  min-width: 0;
+}
+
+.quest-list small,
+.quest-zone {
+  display: block;
+  color: rgba(101, 214, 210, 0.66);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quest-list strong {
+  display: block;
+  margin-top: 3px;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.quest-list p {
+  margin: 3px 0 7px;
+  color: rgba(218, 232, 229, 0.52);
+  font-size: 7px;
+  line-height: 1.4;
+}
+
+.quest-list em {
+  color: rgba(255, 177, 129, 0.65);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  font-style: normal;
+  letter-spacing: 0.07em;
+}
+
+.console-back {
+  margin: 0 0 17px;
+  padding: 0;
+  border: 0;
+  color: rgba(197, 220, 218, 0.5);
+  background: transparent;
+  font-size: 7px;
+  cursor: pointer;
+}
+
+.quest-detail h3 {
+  margin: 6px 0 7px;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.quest-detail > p {
+  margin: 0;
+  color: rgba(218, 232, 229, 0.57);
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.quest-detail dl {
+  display: grid;
+  gap: 1px;
+  margin: 14px 0;
+  background: rgba(197, 220, 218, 0.1);
+}
+
+.quest-detail dl > div {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  gap: 9px;
+  padding: 10px;
+  background: #0c1b29;
+}
+
+.quest-detail dt {
+  color: rgba(101, 214, 210, 0.62);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  letter-spacing: 0.08em;
+}
+
+.quest-detail dd {
+  margin: 0;
+  color: rgba(218, 232, 229, 0.57);
+  font-size: 7px;
+  line-height: 1.4;
+}
+
+.quest-detail pre {
+  overflow-x: auto;
+  margin: 0;
+  padding: 12px;
+  color: rgba(233, 242, 239, 0.72);
+  border: 1px solid rgba(101, 214, 210, 0.12);
+  background: rgba(2, 8, 14, 0.58);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 6px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.quest-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.quest-actions button {
+  min-height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(197, 220, 218, 0.17);
+  color: #eef4f2;
+  background: transparent;
+  font-size: 7px;
+  cursor: pointer;
+}
+
+.quest-actions button.primary {
+  color: #07101c;
+  border-color: #65d6d2;
+  background: #65d6d2;
+  font-weight: 800;
+}
+
+.console-subject {
+  padding: 12px;
+  border: 1px solid rgba(197, 220, 218, 0.1);
+  background: rgba(16, 35, 49, 0.42);
+}
+
+.console-subject > span,
+.market-summary > span {
+  display: block;
+  color: #65d6d2;
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.console-subject > strong {
+  display: block;
+  margin: 3px 0;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 23px;
+  font-weight: 400;
+}
+
+.console-subject > small {
+  display: block;
+  color: rgba(197, 220, 218, 0.42);
+  font-size: 6px;
+  line-height: 1.45;
+}
+
+.skill-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 11px;
+}
+
+.skill-list article {
+  display: grid;
+  grid-template-columns: 37px 1fr 38px;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid rgba(197, 220, 218, 0.09);
+  background: rgba(5, 14, 23, 0.38);
+}
+
+.skill-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.skill-list article > span {
+  min-width: 0;
+}
+
+.skill-list strong,
+.skill-list small {
+  display: block;
+}
+
+.skill-list strong {
+  font-size: 8px;
+}
+
+.skill-list small {
+  margin-top: 2px;
+  color: rgba(197, 220, 218, 0.37);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+}
+
+.skill-list i {
+  height: 3px;
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  background: rgba(197, 220, 218, 0.09);
+}
+
+.skill-list i b {
+  height: 100%;
+  display: block;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.skill-list article > em {
+  color: rgba(197, 220, 218, 0.43);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  font-style: normal;
+  text-align: right;
+}
+
+.console-proof-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 12px 0 0;
+  color: rgba(197, 220, 218, 0.37);
+  font-size: 6px;
+  line-height: 1.45;
+}
+
+.console-proof-note svg {
+  flex: 0 0 auto;
+}
+
+.market-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 201, 130, 0.15);
+  background: rgba(255, 188, 112, 0.045);
+}
+
+.market-summary > span {
+  color: #ffc982;
+}
+
+.market-summary > strong {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  color: #ffc982;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 29px;
+  font-weight: 400;
+}
+
+.market-summary > small {
+  margin-top: 2px;
+  color: rgba(255, 236, 205, 0.38);
+  font-size: 6px;
+}
+
+.market-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.market-list > a {
+  position: relative;
+  display: grid;
+  grid-template-columns: 90px 1fr 14px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  color: #eef4f2;
+  border: 1px solid rgba(197, 220, 218, 0.09);
+  background: rgba(5, 14, 23, 0.4);
+  text-decoration: none;
+}
+
+.market-list > a:hover {
+  border-color: rgba(255, 201, 130, 0.34);
+  background: rgba(255, 201, 130, 0.04);
+}
+
+.market-list > a span b,
+.market-list > a span small {
+  display: block;
+}
+
+.market-list > a span b {
+  color: #ffc982;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.market-list > a span small {
+  margin-top: 2px;
+  color: rgba(197, 220, 218, 0.34);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+}
+
+.market-list > a p {
+  margin: 0;
+  color: rgba(218, 232, 229, 0.55);
+  font-size: 7px;
+  line-height: 1.4;
+}
+
+.console-empty {
+  min-height: 170px;
+  display: grid;
+  place-items: center;
+  place-content: center;
+  gap: 6px;
+  color: rgba(197, 220, 218, 0.35);
+  text-align: center;
+}
+
+.console-empty strong {
+  color: rgba(238, 244, 242, 0.73);
+  font-size: 8px;
+}
+
+.console-empty span {
+  font-size: 6px;
+}
+
+.navigator-intro {
+  margin: 0 0 12px;
+  color: rgba(197, 220, 218, 0.47);
+  font-size: 7px;
+  line-height: 1.5;
+}
+
+.navigator-list {
+  display: grid;
+  gap: 6px;
+}
+
+.navigator-list button {
+  display: grid;
+  grid-template-columns: 4px 1fr 43px 14px;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 10px;
+  border: 1px solid rgba(197, 220, 218, 0.09);
+  color: #eef4f2;
+  background: rgba(5, 14, 23, 0.42);
+  text-align: left;
+  cursor: pointer;
+}
+
+.navigator-list button:hover {
+  border-color: rgba(101, 214, 210, 0.34);
+  background: rgba(101, 214, 210, 0.04);
+}
+
+.navigator-list button > i {
+  width: 4px;
+  height: 39px;
+  box-shadow: 0 0 9px currentColor;
+}
+
+.navigator-list button > span {
+  min-width: 0;
+}
+
+.navigator-list strong,
+.navigator-list small {
+  display: block;
+}
+
+.navigator-list strong {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.navigator-list small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: rgba(197, 220, 218, 0.38);
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navigator-list em {
+  color: rgba(101, 214, 210, 0.58);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  font-style: normal;
+  text-align: right;
+}
+
+.console-open .broadcast-card {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-12px);
+}
+
+@media (max-width: 900px) {
+  .world-console {
+    right: 18px;
+    width: min(425px, calc(100vw - 129px));
+  }
+}
+
+@media (max-width: 620px) {
+  .world-dock {
+    top: 68px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .world-dock button {
+    min-height: 42px;
+    grid-template-columns: 15px 1fr;
+    padding: 6px 7px;
+  }
+
+  .world-dock button:hover,
+  .world-dock button.active {
+    transform: translateY(1px);
+  }
+
+  .world-console {
+    top: 117px;
+    right: 10px;
+    bottom: 88px;
+    left: 10px;
+    width: auto;
+  }
+
+  .world-console > header {
+    height: 58px;
+  }
+
+  .console-content {
+    height: calc(100% - 58px);
+    padding: 13px;
+  }
+
+  .quest-list > button {
+    padding: 10px 9px;
+  }
+
+  .quest-detail h3 {
+    font-size: 24px;
+  }
+
+  .navigator-list button {
+    grid-template-columns: 4px 1fr 34px 12px;
+  }
+}

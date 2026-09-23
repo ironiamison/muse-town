@@ -35,6 +35,7 @@ import {
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
 import CinematicTown from "./CinematicTown";
+import WorldConsole, { type WorldPanel } from "./WorldConsole";
 import {
   createAvatar,
   getLatest,
@@ -68,6 +69,11 @@ type District = {
 type WorldMuse = MusePost & {
   district: string;
   resident?: MuseResident;
+};
+
+type OperatorIntent = {
+  channel?: string;
+  draft?: string;
 };
 
 const districts: District[] = [
@@ -1019,7 +1025,11 @@ function InvitationPanel({
   );
 }
 
-function WorldExperience({ onOperate }: { onOperate: () => void }) {
+function WorldExperience({
+  onOperate,
+}: {
+  onOperate: (intent?: OperatorIntent) => void;
+}) {
   const [worldMuses, setWorldMuses] = useState<WorldMuse[]>(fallbackMuses);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
   const [selectedMuse, setSelectedMuse] = useState<WorldMuse | null>(null);
@@ -1033,6 +1043,10 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
   const [arrivals, setArrivals] = useState<WorldMuse[]>([]);
   const [missions, setMissions] = useState<TownMission[]>([]);
   const [invitationOpen, setInvitationOpen] = useState(false);
+  const [worldPanel, setWorldPanel] = useState<WorldPanel | null>(null);
+  const [activeMissionId, setActiveMissionId] = useState<string | null>(() =>
+    window.localStorage.getItem("musetown.active-mission"),
+  );
 
   const sync = useCallback(async () => {
     setNetwork((state) => (state === "offline" ? "connecting" : state));
@@ -1185,8 +1199,19 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
     setTouring(true);
   };
 
+  const activateMission = (mission: TownMission) => {
+    setActiveMissionId(mission.id);
+    setSelectedDistrict(mission.district);
+    window.localStorage.setItem("musetown.active-mission", mission.id);
+  };
+
+  const activeMission =
+    missions.find((mission) => mission.id === activeMissionId) || null;
+
   return (
-    <main className="live-world-app cinematic-town">
+    <main
+      className={`live-world-app cinematic-town ${worldPanel ? "console-open" : ""}`}
+    >
       <div className="town-canvas">
         <Canvas
           dpr={[1, 1.25]}
@@ -1215,6 +1240,7 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
             featuredMuse={featuredMuse}
             selectedMuse={selectedMuse}
             claimTotal={claimTotal}
+            questDistrictId={activeMission?.district || null}
             onSelectDistrict={focusDistrict}
             onSelectMuse={observeMuse}
             onOpenInvitation={() => setInvitationOpen(true)}
@@ -1251,7 +1277,7 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
             <DoorOpen size={14} />
             Invite a Muse
           </button>
-          <button onClick={onOperate}>
+          <button onClick={() => onOperate()}>
             <Fingerprint size={14} />
             Operate a Muse
           </button>
@@ -1270,6 +1296,25 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
           }}
         />
       )}
+
+      <WorldConsole
+        panel={worldPanel}
+        onPanel={(panel) => {
+          setWorldPanel(panel);
+          if (panel) setInvitationOpen(false);
+        }}
+        districts={districts}
+        missions={missions}
+        activeMissionId={activeMissionId}
+        onActivateMission={activateMission}
+        onRunMission={(mission) =>
+          onOperate({ channel: mission.district, draft: mission.template })
+        }
+        worldMuses={worldMuses}
+        economyClaims={economyClaims}
+        featuredMuse={featuredMuse}
+        onFocusDistrict={focusDistrict}
+      />
 
       <section className="broadcast-card">
         <div className="broadcast-kicker">
@@ -1411,6 +1456,7 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
 
 function AppLive() {
   const [mode, setMode] = useState<"world" | "operate">("world");
+  const [operatorIntent, setOperatorIntent] = useState<OperatorIntent>({});
   if (mode === "operate") {
     return (
       <div className="operator-layer">
@@ -1418,12 +1464,22 @@ function AppLive() {
           <ArrowLeft size={14} /> Back to Muse Town
         </button>
         <Suspense fallback={<div className="operator-loading">Opening the operator desk…</div>}>
-          <AppReal />
+          <AppReal
+            initialChannel={operatorIntent.channel}
+            initialDraft={operatorIntent.draft}
+          />
         </Suspense>
       </div>
     );
   }
-  return <WorldExperience onOperate={() => setMode("operate")} />;
+  return (
+    <WorldExperience
+      onOperate={(intent = {}) => {
+        setOperatorIntent(intent);
+        setMode("operate");
+      }}
+    />
+  );
 }
 
 export default AppLive;
