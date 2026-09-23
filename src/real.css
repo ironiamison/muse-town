@@ -304,6 +304,184 @@
   pointer-events: none;
 }
 
+.operator-world-preview {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(100, 191, 175, 0.2), transparent 35%),
+    #326f68;
+}
+
+.operator-map-grid {
+  position: absolute;
+  top: 49%;
+  left: 50%;
+  width: 560px;
+  height: 560px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  gap: 2px;
+  transform: translate(-50%, -50%) rotate(45deg) scaleY(0.53);
+  transform-origin: center;
+}
+
+.operator-map-grid i {
+  border: 1px solid rgba(42, 111, 70, 0.35);
+  background: #5da967;
+}
+
+.operator-map-grid i:nth-child(3n) {
+  background: #63b06c;
+}
+
+.operator-road {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: 620px;
+  height: 55px;
+  background: #b49a76;
+  box-shadow: inset 0 0 0 2px rgba(92, 68, 43, 0.14);
+}
+
+.operator-road.road-a {
+  transform: translate(-50%, -50%) rotate(28deg);
+}
+
+.operator-road.road-b {
+  transform: translate(-50%, -50%) rotate(-28deg);
+}
+
+.operator-map-room {
+  --room-color: #7cdac4;
+  position: absolute;
+  z-index: 4;
+  min-width: 118px;
+  display: grid;
+  grid-template-columns: 9px 1fr;
+  gap: 7px;
+  padding: 9px 10px;
+  color: #ecf8f1;
+  border: 1px solid rgba(227, 248, 238, 0.32);
+  border-radius: 3px;
+  background: rgba(7, 29, 32, 0.88);
+  box-shadow: 0 10px 25px rgba(6, 31, 31, 0.25);
+  text-align: left;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.operator-map-room:hover,
+.operator-map-room.active {
+  border-color: var(--room-color);
+  transform: translateY(-4px);
+  box-shadow: 0 0 0 2px rgba(5, 27, 29, 0.5), 0 0 22px var(--room-color);
+}
+
+.operator-map-room > i {
+  grid-row: 1 / 3;
+  width: 6px;
+  height: 100%;
+  min-height: 31px;
+  background: var(--room-color);
+  box-shadow: 0 0 11px var(--room-color);
+}
+
+.operator-map-room small,
+.operator-map-room strong {
+  display: block;
+}
+
+.operator-map-room small {
+  color: rgba(215, 238, 230, 0.43);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+}
+
+.operator-map-room strong {
+  margin-top: 2px;
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.operator-map-room em {
+  grid-column: 2;
+  color: var(--room-color);
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  font-style: normal;
+}
+
+.operator-map-room.room-0 {
+  top: 42%;
+  left: 43%;
+}
+
+.operator-map-room.room-1 {
+  top: 20%;
+  left: 61%;
+}
+
+.operator-map-room.room-2 {
+  top: 65%;
+  left: 58%;
+}
+
+.operator-map-room.room-3 {
+  top: 23%;
+  left: 21%;
+}
+
+.operator-plaza {
+  position: absolute;
+  z-index: 2;
+  top: 52%;
+  left: 42%;
+  width: 110px;
+  height: 55px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #bfc5b2;
+  box-shadow: 0 0 0 22px rgba(202, 199, 174, 0.86);
+}
+
+.operator-plaza span {
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: #53bce0;
+  box-shadow: inset 0 0 0 5px #829295;
+}
+
+.operator-map-caption {
+  position: absolute;
+  z-index: 4;
+  bottom: 54px;
+  left: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 11px;
+  border-left: 2px solid #76d6c3;
+  background: rgba(5, 26, 29, 0.76);
+}
+
+.operator-map-caption span {
+  color: #76d6c3;
+  font-family: ui-monospace, "SFMono-Regular", monospace;
+  font-size: 5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.operator-map-caption strong {
+  font-size: 8px;
+}
+
 .district-label {
   min-width: 118px;
   padding: 8px 11px;

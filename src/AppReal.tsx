@@ -1,13 +1,3 @@
-import { Canvas, useFrame } from "@react-three/fiber";
-import {
-  Environment,
-  Float,
-  Html,
-  OrbitControls,
-  RoundedBox,
-  Sparkles,
-  Stars,
-} from "@react-three/drei";
 import {
   Activity,
   ArrowLeft,
@@ -34,9 +24,14 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import * as THREE from "three";
-import type { Group } from "three";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   clearVault,
   createAvatar,
@@ -109,10 +104,10 @@ const demoPosts: MusePost[] = [
 ];
 
 const districtData = [
-  { channel: "lobby", label: "The Lobby", position: [0, 0, 0] as const, color: "#a990ff" },
-  { channel: "skillexchange", label: "Schoolhouse", position: [-3.2, -0.45, -1.2] as const, color: "#72d5ff" },
-  { channel: "townhall", label: "Town Hall", position: [3.15, -0.25, -1.5] as const, color: "#ffc36d" },
-  { channel: "museideas", label: "Workshop", position: [1.9, -0.7, 2.3] as const, color: "#77efb0" },
+  { channel: "lobby", label: "The Lobby", color: "#ef7957" },
+  { channel: "skillexchange", label: "Schoolhouse", color: "#72b768" },
+  { channel: "townhall", label: "Town Hall", color: "#b9758f" },
+  { channel: "museideas", label: "Workshop", color: "#54b8bc" },
 ];
 
 function timeAgo(value: string) {
@@ -123,135 +118,7 @@ function timeAgo(value: string) {
   return `${Math.floor(seconds / 86400)}d`;
 }
 
-function MuseCreature({
-  color,
-  position,
-  delay,
-}: {
-  color: string;
-  position: [number, number, number];
-  delay: number;
-}) {
-  const ref = useRef<Group>(null);
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-    ref.current.position.y = position[1] + Math.sin(clock.elapsedTime * 1.2 + delay) * 0.08;
-    ref.current.rotation.y = Math.sin(clock.elapsedTime * 0.45 + delay) * 0.18;
-  });
-  return (
-    <group ref={ref} position={position}>
-      <RoundedBox args={[0.44, 0.5, 0.32]} radius={0.14} smoothness={4} castShadow>
-        <meshStandardMaterial color={color} roughness={0.5} />
-      </RoundedBox>
-      <mesh position={[-0.1, 0.08, 0.17]}>
-        <sphereGeometry args={[0.04, 16, 16]} />
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
-      <mesh position={[0.1, 0.08, 0.17]}>
-        <sphereGeometry args={[0.04, 16, 16]} />
-        <meshBasicMaterial color="#ffffff" />
-      </mesh>
-      <mesh position={[-0.095, 0.077, 0.208]}>
-        <sphereGeometry args={[0.018, 12, 12]} />
-        <meshBasicMaterial color="#111527" />
-      </mesh>
-      <mesh position={[0.105, 0.077, 0.208]}>
-        <sphereGeometry args={[0.018, 12, 12]} />
-        <meshBasicMaterial color="#111527" />
-      </mesh>
-      <mesh position={[-0.15, 0.36, 0]} rotation={[0, 0, -0.28]}>
-        <coneGeometry args={[0.08, 0.25, 4]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      <mesh position={[0.15, 0.36, 0]} rotation={[0, 0, 0.28]}>
-        <coneGeometry args={[0.08, 0.25, 4]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-    </group>
-  );
-}
-
-function District({
-  channel,
-  label,
-  position,
-  color,
-  selected,
-  onSelect,
-}: {
-  channel: string;
-  label: string;
-  position: readonly [number, number, number];
-  color: string;
-  selected: boolean;
-  onSelect: (channel: string) => void;
-}) {
-  const group = useRef<Group>(null);
-  useFrame(({ clock }) => {
-    if (group.current) {
-      group.current.position.y = position[1] + Math.sin(clock.elapsedTime * 0.35 + position[0]) * 0.06;
-    }
-  });
-  return (
-    <group
-      ref={group}
-      position={position}
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect(channel);
-      }}
-      onPointerEnter={() => (document.body.style.cursor = "pointer")}
-      onPointerLeave={() => (document.body.style.cursor = "default")}
-    >
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[1.25, 0.82, 0.42, 10]} />
-        <meshStandardMaterial
-          color={selected ? "#263451" : "#151d33"}
-          metalness={0.55}
-          roughness={0.5}
-        />
-      </mesh>
-      <mesh position={[0, -0.55, 0]}>
-        <coneGeometry args={[0.8, 0.92, 10]} />
-        <meshStandardMaterial color="#0a1020" roughness={0.85} />
-      </mesh>
-      <RoundedBox position={[0, 0.48, 0]} args={[0.7, 0.65, 0.7]} radius={0.1} smoothness={3}>
-        <meshStandardMaterial color="#222d48" metalness={0.5} roughness={0.4} />
-      </RoundedBox>
-      <mesh position={[0, 0.95, 0]}>
-        <octahedronGeometry args={[0.2, 0]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={selected ? 5 : 2.5}
-          toneMapped={false}
-        />
-      </mesh>
-      <pointLight position={[0, 1, 0]} color={color} intensity={selected ? 10 : 5} distance={5} />
-      {[
-        [-0.72, 0.45, 0.54],
-        [0.7, 0.42, 0.48],
-        [0.58, 0.44, -0.63],
-      ].map((resident, index) => (
-        <MuseCreature
-          key={index}
-          position={resident as [number, number, number]}
-          color={[color, "#dd9cff", "#8be8d1"][index]}
-          delay={index + position[0]}
-        />
-      ))}
-      <Sparkles count={selected ? 26 : 10} scale={2.7} color={color} size={1.5} speed={0.25} />
-      <Html center position={[0, 1.65, 0]} distanceFactor={8}>
-        <button className={`district-label ${selected ? "selected" : ""}`}>
-          <span>#{channel}</span>
-          {label}
-        </button>
-      </Html>
-    </group>
-  );
-}
-
-function LivingTown({
+function OperatorWorldPreview({
   channel,
   onChannel,
 }: {
@@ -259,39 +126,37 @@ function LivingTown({
   onChannel: (channel: string) => void;
 }) {
   return (
-    <>
-      <color attach="background" args={["#060916"]} />
-      <fog attach="fog" args={["#060916", 8, 20]} />
-      <ambientLight intensity={0.75} color="#7b8ac9" />
-      <directionalLight position={[-5, 7, 5]} intensity={2.2} color="#d7ddff" castShadow />
-      <pointLight position={[2, -1, 2]} intensity={8} color="#6755ff" distance={12} />
-      <Stars radius={65} depth={30} count={1200} factor={2.1} fade speed={0.12} />
-      <group position={[0, -0.6, 0]}>
-        {districtData.map((district) => (
-          <District
-            key={district.channel}
-            {...district}
-            selected={channel === district.channel}
-            onSelect={onChannel}
-          />
+    <div className="operator-world-preview">
+      <div className="operator-map-grid" aria-hidden="true">
+        {Array.from({ length: 49 }, (_, index) => (
+          <i key={index} />
         ))}
-        <Float speed={0.8} floatIntensity={0.5}>
-          <mesh position={[-1.6, -1.6, 2.1]} rotation={[0.2, 0.4, 0]}>
-            <dodecahedronGeometry args={[0.22]} />
-            <meshStandardMaterial color="#18223b" />
-          </mesh>
-        </Float>
-      </group>
-      <Environment preset="night" />
-      <OrbitControls
-        makeDefault
-        enablePan={false}
-        minDistance={7}
-        maxDistance={12}
-        minPolarAngle={0.7}
-        maxPolarAngle={1.45}
-      />
-    </>
+      </div>
+      <div className="operator-road road-a" />
+      <div className="operator-road road-b" />
+      {districtData.map((district, index) => (
+        <button
+          key={district.channel}
+          className={`operator-map-room room-${index} ${channel === district.channel ? "active" : ""}`}
+          onClick={() => onChannel(district.channel)}
+          style={{ "--room-color": district.color } as CSSProperties}
+        >
+          <i />
+          <span>
+            <small>#{district.channel}</small>
+            <strong>{district.label}</strong>
+          </span>
+          <em>{index + 2} HERE</em>
+        </button>
+      ))}
+      <div className="operator-plaza">
+        <span />
+      </div>
+      <div className="operator-map-caption">
+        <span>2D WORLD LINK</span>
+        <strong>Choose where this Muse will act</strong>
+      </div>
+    </div>
   );
 }
 
@@ -768,9 +633,7 @@ function AppReal({
       </aside>
 
       <section className="world-stage">
-        <Canvas dpr={[1, 1.6]} shadows camera={{ position: [0, 4.2, 8.8], fov: 43 }} gl={{ toneMapping: THREE.ACESFilmicToneMapping }}>
-          <LivingTown channel={channel} onChannel={chooseChannel} />
-        </Canvas>
+        <OperatorWorldPreview channel={channel} onChannel={chooseChannel} />
         <div className="stage-topline">
           <div><span>YOU ARE WATCHING</span><strong>{districtData.find((item) => item.channel === channel)?.label || `#${channel}`}</strong></div>
           <div className="nearby-faces">
@@ -778,7 +641,7 @@ function AppReal({
             <span>{residents.length} here</span>
           </div>
         </div>
-        <div className="stage-hint"><Activity size={13} /> Drag to orbit · Scroll to travel · Select a place</div>
+        <div className="stage-hint"><Activity size={13} /> Select a district to move this operator context</div>
       </section>
 
       {view === "town" && (
