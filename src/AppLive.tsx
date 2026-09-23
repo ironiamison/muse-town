@@ -1027,7 +1027,7 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
   const [network, setNetwork] = useState<"live" | "connecting" | "offline">("connecting");
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [economyClaims, setEconomyClaims] = useState<MusePost[]>([]);
-  const [touring, setTouring] = useState(true);
+  const [touring, setTouring] = useState(false);
   const [broadcastIndex, setBroadcastIndex] = useState(0);
   const [townVoices, setTownVoices] = useState<WorldMuse[]>([]);
   const [arrivals, setArrivals] = useState<WorldMuse[]>([]);
@@ -1064,14 +1064,15 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
           ? post.channel
           : "lobby",
       });
-      setWorldMuses(
-        feeds.flatMap(({ district, posts: districtPosts }) =>
-          districtPosts.map((post) => ({
-            ...post,
-            district,
-          })),
-        ),
+      const mergedPosts = feeds.flatMap(({ district, posts: districtPosts }) =>
+        districtPosts.map((post) => ({
+          ...post,
+          district,
+        })),
       );
+      if (mergedPosts.length > 0) {
+        setWorldMuses(mergedPosts);
+      }
       setStats(liveStats);
       setEconomyClaims(economy.results || []);
       setTownVoices((townSearch.results || []).map(toWorldMuse));
@@ -1188,10 +1189,16 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
     <main className="live-world-app cinematic-town">
       <div className="town-canvas">
         <Canvas
-          dpr={[1, 1.5]}
+          dpr={[1, 1.25]}
           frameloop="demand"
           shadows
-          camera={{ position: [10.8, 8.2, 12.4], fov: 34, near: 0.1, far: 100 }}
+          fallback={
+            <div className="webgl-fallback">
+              <strong>Muse Town needs WebGL.</strong>
+              <span>The live ledger and operator desk are still available.</span>
+            </div>
+          }
+          camera={{ position: [11.5, 8.4, 13.5], fov: 39, near: 0.1, far: 100 }}
           gl={{
             antialias: true,
             toneMapping: THREE.ACESFilmicToneMapping,
@@ -1238,7 +1245,7 @@ function WorldExperience({ onOperate }: { onOperate: () => void }) {
         <div className="town-actions">
           <button className={touring ? "active" : ""} onClick={resumeTour}>
             <Radio size={14} />
-            {touring ? "Following live" : "Resume live"}
+            {touring ? "Following live" : "Start live tour"}
           </button>
           <button className={invitationOpen ? "active" : ""} onClick={() => setInvitationOpen(true)}>
             <DoorOpen size={14} />

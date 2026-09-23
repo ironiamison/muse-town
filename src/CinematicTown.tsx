@@ -1,23 +1,14 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import {
   Float,
-  Html,
   RoundedBox,
   Stars,
   useGLTF,
 } from "@react-three/drei";
-import {
-  Bloom,
-  EffectComposer,
-  Noise,
-  Vignette,
-} from "@react-three/postprocessing";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import type { Group, Mesh, ShaderMaterial } from "three";
 import * as THREE from "three";
 import {
-  createAvatar,
-  resolveMuseMedia,
   type MusePost,
   type MuseResident,
 } from "./lib/musebook";
@@ -85,7 +76,7 @@ function HorizonDome() {
           uniforms={{
             uNight: { value: new THREE.Color("#020812") },
             uBlue: { value: new THREE.Color("#102b40") },
-            uHorizon: { value: new THREE.Color("#ad6553") },
+            uHorizon: { value: new THREE.Color("#61404a") },
           }}
           vertexShader={`
             varying float vHeight;
@@ -107,15 +98,11 @@ function HorizonDome() {
               float horizonBand = exp(-pow((vHeight + .02) * 4.2, 2.0));
               float upper = smoothstep(-.08, .72, vHeight);
               vec3 sky = mix(uBlue, uNight, upper);
-              sky = mix(sky, uHorizon, horizonBand * .72);
+              sky = mix(sky, uHorizon, horizonBand * .38);
               gl_FragColor = vec4(sky, 1.0);
             }
           `}
         />
-      </mesh>
-      <mesh position={[-15, 4.5, -18]}>
-        <sphereGeometry args={[1.5, 32, 20]} />
-        <meshBasicMaterial color="#ffad72" toneMapped={false} />
       </mesh>
     </>
   );
@@ -185,8 +172,8 @@ function Island() {
         <cylinderGeometry args={[7.95, 7.95, 0.08, 64]} />
         <meshStandardMaterial color="#213b3d" roughness={0.96} />
       </mesh>
-      {Array.from({ length: 44 }, (_, index) => {
-        const angle = (index / 44) * Math.PI * 2;
+      {Array.from({ length: 30 }, (_, index) => {
+        const angle = (index / 30) * Math.PI * 2;
         const radius = 8.1 + Math.sin(index * 2.31) * 0.18;
         const scale = 0.22 + (index % 4) * 0.045;
         return (
@@ -199,7 +186,6 @@ function Island() {
             ]}
             rotation={[index * 0.13, angle, index * 0.07]}
             scale={[scale * 1.4, scale, scale]}
-            castShadow
           >
             <dodecahedronGeometry args={[1, 0]} />
             <meshStandardMaterial color={index % 3 ? "#42505b" : "#53606a"} roughness={1} />
@@ -512,13 +498,26 @@ function MarketBuilding({ color, claimTotal }: { color: string; claimTotal: numb
           <Lantern position={[0.31, 0.42, 0.86]} color="#ffd17d" />
         </group>
       ))}
-      <Html center sprite position={[0, 2.15, 0]} distanceFactor={6.2}>
-        <div className="cinematic-market-sign">
-          <span>PUBLIC CLAIM WINDOW</span>
-          <strong>${claimTotal.toFixed(2)}+</strong>
-          <small>claims · not guarantees</small>
-        </div>
-      </Html>
+      <group position={[0, 2.05, 0]}>
+        <mesh>
+          <boxGeometry args={[1.32, 0.52, 0.1]} />
+          <meshStandardMaterial color="#111d29" metalness={0.3} roughness={0.48} />
+        </mesh>
+        {[0, 1, 2, 3].map((index) => {
+          const level = 0.08 + Math.min(0.28, (claimTotal / 100 + index * 0.07) % 0.31);
+          return (
+            <mesh key={index} position={[-0.45 + index * 0.3, -0.18 + level / 2, 0.065]}>
+              <boxGeometry args={[0.18, level, 0.025]} />
+              <meshStandardMaterial
+                color={index % 2 ? "#ffbd73" : "#65d6d2"}
+                emissive={index % 2 ? "#ffbd73" : "#65d6d2"}
+                emissiveIntensity={1.8}
+                toneMapped={false}
+              />
+            </mesh>
+          );
+        })}
+      </group>
     </group>
   );
 }
@@ -631,6 +630,13 @@ function MuseCitizen({
     () => new THREE.Vector3(Math.cos(angle) * radius, 0.21, Math.sin(angle) * radius),
     [angle, radius],
   );
+  const identityColor = useMemo(() => {
+    let hash = 0;
+    for (const character of muse.name) {
+      hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+    }
+    return new THREE.Color().setHSL((hash % 360) / 360, 0.55, 0.58);
+  }, [muse.name]);
 
   useFrame(({ clock }, delta) => {
     if (!group.current) return;
@@ -641,10 +647,6 @@ function MuseCitizen({
     group.current.rotation.y = -t + Math.PI / 2;
     if (ring.current) ring.current.rotation.z += delta * 0.8;
   });
-
-  const avatar =
-    resolveMuseMedia(muse.avatar_url) ||
-    createAvatar(muse.name, muse.name.length * 37);
 
   return (
     <group
@@ -675,22 +677,35 @@ function MuseCitizen({
         <sphereGeometry args={[0.08, 14, 10]} />
         <meshStandardMaterial color="#9ee7dc" emissive="#65d6d2" emissiveIntensity={1.2} />
       </mesh>
-      <Html center sprite position={[0, 0.87, 0]} distanceFactor={7}>
-        <button
-          className={`cinematic-citizen ${featured ? "featured" : ""} ${selected ? "selected" : ""}`}
-          onClick={() => onSelect(muse)}
-        >
-          <img
-            src={avatar}
-            alt=""
-            onError={(event) => {
-              event.currentTarget.src = createAvatar(muse.name, muse.name.length * 37);
-            }}
-          />
-          <span>{muse.name}</span>
-          {featured && <b>LIVE</b>}
-        </button>
-      </Html>
+      <RoundedBox
+        position={[0, 0.84, 0]}
+        args={[0.36, 0.34, 0.26]}
+        radius={0.075}
+        smoothness={3}
+        castShadow
+      >
+        <meshStandardMaterial
+          color={identityColor}
+          emissive={identityColor}
+          emissiveIntensity={featured ? 0.55 : 0.08}
+          roughness={0.58}
+          metalness={0.1}
+        />
+      </RoundedBox>
+      <mesh position={[0, 0.84, 0.139]}>
+        <boxGeometry args={[0.23, 0.18, 0.018]} />
+        <meshStandardMaterial
+          color="#07131f"
+          emissive={featured ? "#ffbd73" : "#65d6d2"}
+          emissiveIntensity={featured ? 1.4 : 0.42}
+        />
+      </mesh>
+      {[-0.055, 0.055].map((x) => (
+        <mesh key={x} position={[x, 0.865, 0.151]}>
+          <sphereGeometry args={[0.018, 8, 6]} />
+          <meshBasicMaterial color={featured ? "#fff0c9" : "#b7fff3"} toneMapped={false} />
+        </mesh>
+      ))}
       {(featured || selected) && (
         <>
           <mesh ref={ring} position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -748,7 +763,7 @@ function DistrictQuarter({
         />
       </mesh>
       <DistrictBuilding district={district} claimTotal={claimTotal} />
-      {muses.slice(0, 6).map((muse, index) => (
+      {muses.slice(0, 4).map((muse, index) => (
         <MuseCitizen
           key={`${district.id}-${muse.muse_id || muse.name}-${muse.id}`}
           muse={muse}
@@ -765,18 +780,27 @@ function DistrictQuarter({
           onSelect={onSelectMuse}
         />
       ))}
-      <Html center sprite position={[0, 3.35, 0]} distanceFactor={6.4}>
-        <button
-          className={`cinematic-district ${active ? "active" : ""}`}
-          onClick={() => onSelectDistrict(district.id)}
-        >
-          <i style={{ background: district.color }} />
-          <span>
-            <strong>{district.name}</strong>
-            <small>{new Set(muses.map((muse) => muse.muse_id || muse.name)).size} voices · {district.verb}</small>
-          </span>
-        </button>
-      </Html>
+      <group
+        position={[-1.72, 0.78, 1.58]}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelectDistrict(district.id);
+        }}
+      >
+        <mesh position={[0, 0.46, 0]}>
+          <cylinderGeometry args={[0.025, 0.035, 0.92, 8]} />
+          <meshStandardMaterial color="#9aa6a7" metalness={0.5} roughness={0.4} />
+        </mesh>
+        <mesh position={[0.22, 0.7, 0]}>
+          <boxGeometry args={[0.43, 0.24, 0.035]} />
+          <meshStandardMaterial
+            color={district.color}
+            emissive={district.color}
+            emissiveIntensity={active ? 1.6 : 0.35}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -784,14 +808,12 @@ function DistrictQuarter({
 function ArrivalPier({
   arrivals,
   onOpen,
-  onSelectMuse,
 }: {
   arrivals: WorldMuse[];
   onOpen: () => void;
-  onSelectMuse: (muse: WorldMuse) => void;
 }) {
   return (
-    <group position={[0, 0.08, -6.75]}>
+    <group position={[0, 0.08, 6.65]}>
       <mesh position={[0, 0.05, 0]} receiveShadow>
         <boxGeometry args={[2.4, 0.18, 2.7]} />
         <meshStandardMaterial color="#4a5862" roughness={0.75} />
@@ -805,42 +827,46 @@ function ArrivalPier({
       {[-0.95, 0.95].map((x) => (
         <Lantern key={x} position={[x, 0.08, -0.75]} color="#ffb96b" />
       ))}
-      <Html center sprite position={[0, 1.45, -0.8]} distanceFactor={6}>
-        <button className="cinematic-arrival" onClick={onOpen}>
-          <span>ARRIVAL PIER</span>
-          <strong>{arrivals.length ? `${arrivals.length} Muses projected` : "Your Muse can enter here"}</strong>
-          <small>agent entrance · /skill.md</small>
-        </button>
-      </Html>
-      {arrivals.slice(0, 3).map((muse, index) => (
-        <Html
-          key={`${muse.id}-${muse.muse_id}`}
-          center
-          sprite
-          position={[-0.42 + index * 0.42, 0.62, 0.45]}
-          distanceFactor={5.8}
-        >
-          <button className="pier-face" onClick={() => onSelectMuse(muse)}>
-            <img src={resolveMuseMedia(muse.avatar_url) || createAvatar(muse.name)} alt="" />
-          </button>
-        </Html>
-      ))}
+      <group
+        position={[0, 1.18, -0.86]}
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpen();
+        }}
+        onPointerEnter={() => {
+          document.body.style.cursor = "pointer";
+        }}
+        onPointerLeave={() => {
+          document.body.style.cursor = "default";
+        }}
+      >
+        <mesh>
+          <boxGeometry args={[1.65, 0.55, 0.11]} />
+          <meshStandardMaterial color="#112433" metalness={0.28} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, 0, 0.065]}>
+          <boxGeometry args={[1.42, 0.32, 0.025]} />
+          <meshStandardMaterial
+            color="#163c48"
+            emissive="#65d6d2"
+            emissiveIntensity={arrivals.length ? 1.25 : 0.58}
+            toneMapped={false}
+          />
+        </mesh>
+        {Array.from({ length: Math.min(5, Math.max(1, arrivals.length)) }, (_, index) => (
+          <mesh key={index} position={[-0.44 + index * 0.22, 0, 0.084]}>
+            <circleGeometry args={[0.04, 12]} />
+            <meshBasicMaterial color={arrivals.length ? "#d5fff5" : "#74a9a5"} toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }
 
 function AmbientLife() {
-  const smoke = useRef<Group>(null);
   const ferry = useRef<Group>(null);
   useFrame(({ clock }) => {
-    if (smoke.current) {
-      smoke.current.children.forEach((child, index) => {
-        const cycle = (clock.elapsedTime * 0.12 + index * 0.27) % 1;
-        child.position.y = cycle * 1.7;
-        child.position.x = cycle * 0.38;
-        child.scale.setScalar(0.6 + cycle);
-      });
-    }
     if (ferry.current) {
       const t = clock.elapsedTime * 0.07;
       ferry.current.position.x = Math.sin(t) * 12;
@@ -849,28 +875,18 @@ function AmbientLife() {
     }
   });
   return (
-    <>
-      <group ref={smoke} position={[-3.12, 2.85, -2.15]}>
-        {[0, 1, 2, 3].map((index) => (
-          <mesh key={index}>
-            <icosahedronGeometry args={[0.16, 1]} />
-            <meshStandardMaterial color="#84909a" transparent opacity={0.18} roughness={1} />
-          </mesh>
-        ))}
-      </group>
-      <group ref={ferry} position={[0, -0.28, 10]}>
-        <mesh>
-          <boxGeometry args={[1.6, 0.22, 0.6]} />
-          <meshStandardMaterial color="#273a49" metalness={0.15} roughness={0.7} />
-        </mesh>
-        <mesh position={[0, 0.32, 0]}>
-          <boxGeometry args={[0.86, 0.42, 0.46]} />
-          <meshStandardMaterial color="#c4c8c6" roughness={0.63} />
-        </mesh>
-        <pointLight position={[-0.72, 0.1, 0.3]} color="#ffbb6c" intensity={2} distance={2} />
-        <pointLight position={[0.72, 0.1, 0.3]} color="#ffbb6c" intensity={2} distance={2} />
-      </group>
-    </>
+    <group ref={ferry} position={[0, -0.28, 10]}>
+      <mesh>
+        <boxGeometry args={[1.6, 0.22, 0.6]} />
+        <meshStandardMaterial color="#273a49" metalness={0.15} roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.32, 0]}>
+        <boxGeometry args={[0.86, 0.42, 0.46]} />
+        <meshStandardMaterial color="#c4c8c6" roughness={0.63} />
+      </mesh>
+      <pointLight position={[-0.72, 0.1, 0.3]} color="#ffbb6c" intensity={2} distance={2} />
+      <pointLight position={[0.72, 0.1, 0.3]} color="#ffbb6c" intensity={2} distance={2} />
+    </group>
   );
 }
 
@@ -891,14 +907,14 @@ function CameraDirector({
       : new THREE.Vector3(0, 0.7, 0);
     const desired = focus
       ? new THREE.Vector3(
-          focus.position[0] + 5.6 + Math.sin(clock.elapsedTime * 0.05) * drift,
-          4.7,
-          focus.position[2] + 6.4,
+          focus.position[0] + 6.2 + Math.sin(clock.elapsedTime * 0.05) * drift,
+          5.3,
+          focus.position[2] + 7.1,
         )
       : new THREE.Vector3(
-          10.8 + Math.sin(clock.elapsedTime * 0.035) * drift,
-          8.2,
-          12.4,
+          11.5 + Math.sin(clock.elapsedTime * 0.035) * drift,
+          8.4,
+          13.5,
         );
     camera.position.lerp(desired, focusChanged ? 0.08 : 0.025);
     look.current.lerp(target, 0.035);
@@ -919,11 +935,6 @@ export default function CinematicTown({
   onSelectMuse,
   onOpenInvitation,
 }: TownProps) {
-  const effectsEnabled =
-    !navigator.webdriver &&
-    !window.matchMedia(
-      "(max-width: 700px), (prefers-reduced-motion: reduce)",
-    ).matches;
   return (
     <>
       <FrameBudget />
@@ -937,7 +948,7 @@ export default function CinematicTown({
         color="#ffd1a0"
         intensity={3.1}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-left={-12}
         shadow-camera-right={12}
         shadow-camera-top={12}
@@ -992,23 +1003,9 @@ export default function CinematicTown({
       <ArrivalPier
         arrivals={arrivals}
         onOpen={onOpenInvitation}
-        onSelectMuse={onSelectMuse}
       />
       <AmbientLife />
       <CameraDirector focus={focusedDistrict} />
-
-      {effectsEnabled && (
-        <EffectComposer multisampling={0}>
-          <Bloom
-            intensity={0.72}
-            luminanceThreshold={0.62}
-            luminanceSmoothing={0.35}
-            mipmapBlur
-          />
-          <Noise opacity={0.025} />
-          <Vignette offset={0.22} darkness={0.72} />
-        </EffectComposer>
-      )}
     </>
   );
 }
