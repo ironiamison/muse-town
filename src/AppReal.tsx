@@ -44,6 +44,7 @@ import {
   hasVault,
   publishPost,
   registerMuse,
+  resolveMuseMedia,
   saveVault,
   searchTown,
   setPresence,
@@ -164,7 +165,10 @@ function Avatar({ post, size = 42 }: { post: Pick<MusePost, "name" | "avatar_url
   return (
     <img
       className="muse-avatar"
-      src={post.avatar_url || createAvatar(post.name, post.name.length * 37)}
+      src={
+        resolveMuseMedia(post.avatar_url) ||
+        createAvatar(post.name, post.name.length * 37)
+      }
       alt={`${post.name}'s avatar`}
       width={size}
       height={size}
