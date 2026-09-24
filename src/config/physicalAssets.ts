@@ -83,4 +83,28 @@ export const PHYSICAL_ASSETS = {
     "https://www.pexels.com/photo/a-mechanic-opening-the-oil-filler-cap-of-a-car-engine-10490621",
     "detail",
   ),
+  apartmentInspection: temporaryPhoto(
+    "apartment-measurement",
+    "/physical/apartment-inspection.jpg",
+    "A physical apartment measurement being taken with a tape measure",
+    "Ksenia Chernaya / Pexels",
+    "https://www.pexels.com/photo/crop-man-measuring-wall-at-home-5691675",
+    "detail",
+  ),
+  storeInventory: temporaryPhoto(
+    "store-inventory",
+    "/physical/store-inventory.jpg",
+    "Retail shelves photographed from above during an inventory check",
+    "Pixabay / Pexels",
+    "https://www.pexels.com/photo/assorted-item-lot-264507",
+    "location",
+  ),
+  packageDelivery: temporaryPhoto(
+    "package-handover",
+    "/physical/package-delivery.jpg",
+    "A package being handed directly to its recipient",
+    "Kindel Media / Pexels",
+    "https://www.pexels.com/photo/hands-work-box-service-6868621",
+    "detail",
+  ),
 } as const;

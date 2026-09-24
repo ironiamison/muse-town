@@ -1,32 +1,81 @@
 import { ArrowRight, Check, MapPin, RotateCcw, ShieldCheck } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { BRAND_ASSETS } from "../../config/brandAssets";
 import { PHYSICAL_ASSETS } from "../../config/physicalAssets";
 import type { MuseIdentity } from "../../lib/musebook";
 
 type Phase = "ready" | "crossing" | "matched" | "onsite" | "proof" | "complete";
 
 const PHASE_ORDER: Phase[] = ["ready", "crossing", "matched", "onsite", "proof", "complete"];
+const PHASE_LABEL: Record<Phase, string> = {
+  ready: "Intent staged",
+  crossing: "Crossing into reality",
+  matched: "Executor accepted",
+  onsite: "Executor on site",
+  proof: "Proof returning",
+  complete: "Result received",
+};
 
 const REQUESTS = [
   {
     short: "Inspect this Porsche before I buy it.",
     title: "Inspect this Porsche before I buy it.",
     result: "Passenger-side door shows evidence of repainting not disclosed in the listing.",
+    asset: PHYSICAL_ASSETS.dealership,
+    evidence: [PHYSICAL_ASSETS.heroVehicle, PHYSICAL_ASSETS.roadVehicle, PHYSICAL_ASSETS.interior, PHYSICAL_ASSETS.dashboard],
+    report: [
+      ["Exterior", "Good"],
+      ["Interior", "Excellent"],
+      ["Paint", "Repaint detected"],
+      ["VIN", "Match"],
+      ["Cold start", "Verified"],
+      ["Undisclosed issue", "Passenger-side door"],
+    ],
   },
   {
     short: "Walk through this apartment.",
     title: "Walk through this apartment before I sign.",
     result: "Moisture damage is visible below the north-facing bedroom window.",
+    asset: PHYSICAL_ASSETS.apartmentInspection,
+    evidence: Array(4).fill(PHYSICAL_ASSETS.apartmentInspection),
+    report: [
+      ["Windows", "Operational"],
+      ["Utilities", "Active"],
+      ["Measurements", "62.4 m²"],
+      ["Address", "Match"],
+      ["Moisture", "Detected"],
+      ["Undisclosed issue", "Bedroom window"],
+    ],
   },
   {
     short: "Check if this item is in stock.",
     title: "Check whether this item is physically in stock.",
     result: "Two units are available on shelf B-14; the listed color is not present.",
+    asset: PHYSICAL_ASSETS.storeInventory,
+    evidence: Array(4).fill(PHYSICAL_ASSETS.storeInventory),
+    report: [
+      ["Item", "Located"],
+      ["Quantity", "2 units"],
+      ["Shelf", "B-14"],
+      ["Barcode", "Match"],
+      ["Listed color", "Unavailable"],
+      ["Media", "Original"],
+    ],
   },
   {
     short: "Pick this up and deliver it.",
     title: "Pick this up and deliver it before 18:00.",
     result: "Item collected intact and delivered to the verified destination at 17:42.",
+    asset: PHYSICAL_ASSETS.packageDelivery,
+    evidence: Array(4).fill(PHYSICAL_ASSETS.packageDelivery),
+    report: [
+      ["Pickup", "Verified"],
+      ["Package", "Intact"],
+      ["Recipient", "Matched"],
+      ["Destination", "Verified"],
+      ["Delivered", "17:42"],
+      ["Proof", "Original media"],
+    ],
   },
 ] as const;
 
@@ -42,7 +91,7 @@ export default function BoundaryHero({
   onConnect: () => void;
 }) {
   const [selected, setSelected] = useState(0);
-  const [phase, setPhase] = useState<Phase>("complete");
+  const [phase, setPhase] = useState<Phase>("ready");
   const timers = useRef<number[]>([]);
   const request = REQUESTS[selected];
 
@@ -82,9 +131,11 @@ export default function BoundaryHero({
           <div className="boundary-hero__requests" aria-label="Example physical requests">
             {REQUESTS.map((item, index) => (
               <button
+                type="button"
                 className={selected === index ? "active" : ""}
                 key={item.short}
                 onClick={() => dispatch(index)}
+                aria-pressed={selected === index}
               >
                 <ArrowRight />
                 <span>{item.short}</span>
@@ -95,10 +146,11 @@ export default function BoundaryHero({
       </div>
 
       <div className="boundary-hero__physical">
-        <img src={PHYSICAL_ASSETS.dealership.src} alt={PHYSICAL_ASSETS.dealership.alt} />
+        <img className="boundary-hero__reality-base" src={request.asset.src} alt={request.asset.alt} />
+        <img className="boundary-hero__reality-reveal" src={request.asset.src} alt="" aria-hidden="true" />
         <div className="boundary-hero__photo-shade" />
-        <a href={PHYSICAL_ASSETS.dealership.source} target="_blank" rel="noreferrer">
-          Temporary photo · {PHYSICAL_ASSETS.dealership.credit}
+        <a href={request.asset.source} target="_blank" rel="noreferrer">
+          Temporary photo · {request.asset.credit}
         </a>
       </div>
 
@@ -113,8 +165,19 @@ export default function BoundaryHero({
       </div>
 
       <div className="boundary-hero__muse">
-        <span>{identity?.avatarUrl ? <img src={identity.avatarUrl} alt="" /> : null}</span>
+        <span>
+          <img
+            src={identity?.avatarUrl ?? BRAND_ASSETS.muse.src}
+            alt={identity?.avatarUrl ? "" : BRAND_ASSETS.muse.alt}
+          />
+        </span>
         <small>{identity?.name ?? "Muse"}</small>
+      </div>
+
+      <div className="boundary-hero__phase" aria-live="polite">
+        <i />
+        <span>{PHASE_LABEL[phase]}</span>
+        <small>{phase === "ready" ? "Select a request to run the execution" : `0${PHASE_ORDER.indexOf(phase) + 1} / 06`}</small>
       </div>
 
       <div className="boundary-hero__intent-route" aria-hidden="true"><i /></div>
@@ -138,9 +201,9 @@ export default function BoundaryHero({
       </ol>
 
       <div className="boundary-hero__evidence">
-        {[PHYSICAL_ASSETS.heroVehicle, PHYSICAL_ASSETS.roadVehicle, PHYSICAL_ASSETS.interior, PHYSICAL_ASSETS.dashboard].map(
+        {request.evidence.map(
           (asset, index) => (
-            <figure key={asset.id} style={{ "--evidence-index": index } as CSSProperties}>
+            <figure key={`${asset.id}-${index}`} style={{ "--evidence-index": index } as CSSProperties}>
               <img src={asset.src} alt={asset.alt} />
               <figcaption>{index === 3 ? "+10" : `0${index + 1}`}</figcaption>
             </figure>
@@ -163,23 +226,20 @@ export default function BoundaryHero({
           <small><Check /> 14 photos　<Check /> 3 videos　<Check /> VIN matched　<Check /> Location verified</small>
         </header>
         <dl>
-          <div><dt>Exterior</dt><dd>Good</dd></div>
-          <div><dt>Interior</dt><dd>Excellent</dd></div>
-          <div><dt>Paint</dt><dd>Repaint detected</dd></div>
-          <div><dt>VIN</dt><dd>Match</dd></div>
-          <div><dt>Cold start</dt><dd>Verified</dd></div>
-          <div><dt>Undisclosed issue</dt><dd>Passenger-side door</dd></div>
+          {request.report.map(([label, value]) => (
+            <div key={label}><dt>{label}</dt><dd className={/issue|moisture|color|paint/i.test(label) ? "is-signal" : ""}>{value}</dd></div>
+          ))}
         </dl>
       </div>
 
       <figure className="boundary-hero__proof-image">
-        <img src={PHYSICAL_ASSETS.emblem.src} alt={PHYSICAL_ASSETS.emblem.alt} />
+        <img src={request.evidence[0].src} alt={request.evidence[0].alt} />
         <figcaption><ShieldCheck /> Evidence <small>IMG_0184.JPG · Warsaw</small></figcaption>
       </figure>
 
       <div className="boundary-hero__controls">
-        <button onClick={() => dispatch()}><RotateCcw /> Run execution</button>
-        <button onClick={onConnect}>{identity ? `Open ${identity.name}` : "Connect Muse"} <ArrowRight /></button>
+        <button type="button" onClick={() => dispatch()}><RotateCcw /> {phase === "ready" ? "Run execution" : "Replay execution"}</button>
+        <button type="button" onClick={onConnect}>{identity ? `Open ${identity.name}` : "Connect Muse"} <ArrowRight /></button>
       </div>
 
       <div className="boundary-hero__location"><MapPin /> Warsaw · product demonstration</div>

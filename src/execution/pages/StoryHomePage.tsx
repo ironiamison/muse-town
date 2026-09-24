@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type { MuseIdentity } from "../../lib/musebook";
 import type { Execution } from "../../lib/execution";
+import { BRAND_ASSETS } from "../../config/brandAssets";
 import { PHYSICAL_ASSETS } from "../../config/physicalAssets";
 import BoundaryHero from "../components/BoundaryHero";
 import DispatchCanvas from "../components/DispatchCanvas";
@@ -32,26 +33,38 @@ export default function StoryHomePage({
     <main className="en-page story-home">
       <BoundaryHero identity={identity} onConnect={onConnect} />
 
-      <section className="story-request" id="request">
+      <section className="story-principle" id="request">
         <header>
-          <span>02 / Request</span>
-          <p>Muse reaches the edge of software.</p>
+          <span>Outside the browser</span>
+          <small>01 / The constraint</small>
         </header>
-        <RealityBoundary direction="outbound" image={PHYSICAL_ASSETS.heroVehicle} />
+        <h2><i>Intent</i> has no weight.<br /><strong>Reality does.</strong></h2>
+        <div className="story-principle__ledger" aria-label="MuseTools execution loop">
+          <span><b>01</b> Muse states the outcome</span>
+          <span><b>02</b> MuseTools crosses the boundary</span>
+          <span><b>03</b> A verified human acts</span>
+          <span><b>04</b> Proof returns as structure</span>
+        </div>
       </section>
 
-      <section className="story-reality" id="reality">
-        <img src={PHYSICAL_ASSETS.dealership.src} alt={PHYSICAL_ASSETS.dealership.alt} loading="eager" />
-        <div className="story-reality__veil" />
-        <div className="story-reality__copy">
-          <p>AI can search it.<br />AI can call it.</p>
-          <h2>AI can’t<br />go there.</h2>
-          <strong>MuseTools can.</strong>
-        </div>
-        <div className="story-reality__meta">
-          <span>03 / Reality</span>
-          <span>Warsaw · 52.2297° N</span>
-          <a href={PHYSICAL_ASSETS.dealership.source} target="_blank" rel="noreferrer">Temporary photo · {PHYSICAL_ASSETS.dealership.credit}</a>
+      <section className="story-field" id="reality">
+        <figure>
+          <img src={PHYSICAL_ASSETS.roadVehicle.src} alt={PHYSICAL_ASSETS.roadVehicle.alt} loading="lazy" />
+          <figcaption>
+            <span>Warsaw · physical execution</span>
+            <a href={PHYSICAL_ASSETS.roadVehicle.source} target="_blank" rel="noreferrer">
+              Temporary photo · {PHYSICAL_ASSETS.roadVehicle.credit}
+            </a>
+          </figcaption>
+        </figure>
+        <div className="story-field__copy">
+          <span>02 / The crossing</span>
+          <h2>A person<br />goes.</h2>
+          <p>Not a simulation. Not a scraped answer. Someone arrives, follows the evidence contract, and records what is actually there.</p>
+          <div>
+            <small>Requested</small>
+            <strong>Inspect the vehicle before purchase.</strong>
+          </div>
         </div>
       </section>
 
@@ -109,11 +122,14 @@ export default function StoryHomePage({
       </section>
 
       <section className="story-conclusion">
-        <div className="story-conclusion__result">
-          <span><ShieldCheck /> Result received</span>
-          <p>Passenger-side door shows evidence of repainting not disclosed in the listing.</p>
-          <small>Intent → reality → evidence → intelligence</small>
-        </div>
+        <figure className="story-conclusion__muse">
+          <img src={BRAND_ASSETS.muse.src} alt={BRAND_ASSETS.muse.alt} />
+          <figcaption>
+            <span><ShieldCheck /> Result received</span>
+            <p>Passenger-side door shows evidence of repainting not disclosed in the listing.</p>
+            <small>Intent → reality → evidence → intelligence</small>
+          </figcaption>
+        </figure>
         <div className="story-conclusion__cta">
           <span>08 / Muse continues</span>
           <h2>Your Muse<br />just left<br />the internet.</h2>
