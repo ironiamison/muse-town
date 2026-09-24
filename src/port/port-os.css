@@ -73,34 +73,6 @@ textarea {
   display: block;
 }
 
-.world-loading {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 14px;
-  color: rgba(226, 220, 205, 0.48);
-  background: #101716;
-  font: 500 9px/1 var(--port-mono);
-}
-
-.world-loading i {
-  width: 110px;
-  height: 3px;
-  overflow: hidden;
-  background: rgba(226, 220, 205, 0.12);
-}
-
-.world-loading i::after {
-  width: 42%;
-  height: 100%;
-  display: block;
-  content: "";
-  background: var(--port-signal);
-  animation: worldLoad 1s ease-in-out infinite alternate;
-}
-
 .world-veil {
   z-index: 1;
   pointer-events: none;
@@ -2657,11 +2629,6 @@ textarea {
   0% { opacity: 0; transform: rotateX(90deg) translateY(-12px); }
   70% { transform: rotateX(-10deg); }
   100% { opacity: 1; transform: rotateX(0); }
-}
-
-@keyframes worldLoad {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(240%); }
 }
 
 @media (min-width: 2100px) {

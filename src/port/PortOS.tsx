@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas } from "@react-three/fiber";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import OperatorDialog, { type OperatorIntent } from "../Operator";
 import { CreateMuseDialog } from "../Passport";
 import { RecordDialog, readRecordPath, recordPath, type RecordRef } from "../Record";
@@ -40,7 +41,7 @@ import NetworkTape from "./NetworkTape";
 import OpportunityComposer from "./OpportunityComposer";
 import OpportunityDetail, { type EconomyAct } from "./OpportunityDetail";
 import PortPassport from "./PortPassport";
-import type { WorldPresence } from "./PortWorld";
+import PortWorld, { type WorldPresence } from "./PortWorld";
 import {
   ArenaPanel,
   ArrivalPanel,
@@ -55,8 +56,6 @@ type Terminal = "arrival" | "works" | "market" | "arena" | "vault" | "protocol";
 type NetworkState = "connecting" | "live" | "offline";
 type OpenRecord = { id: number; initial?: RecordRef | null };
 type Ritual = { key: number; code: string; state: string; detail: string; kind: "route" | "settlement" | "record" };
-
-const WorldStage = lazy(() => import("./WorldStage"));
 
 const CHANNELS = Array.from(new Set(Object.values(PORT_CHANNELS)));
 const DISTRICTS = [
@@ -419,19 +418,24 @@ export default function PortOS() {
   return (
     <main className={`port-os mode-${mode}`} data-network={network}>
       <div className="world-stage" aria-label="PORT World">
-        <Suspense fallback={<div className="world-loading"><i /><span>ASSEMBLING PORT WORLD</span></div>}>
-          <WorldStage
+        <Canvas
+          shadows
+          camera={{ position: [17, 14, 18], fov: 34, near: 0.1, far: 120 }}
+          dpr={[1, 1.65]}
+          gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+        >
+          <PortWorld
             mode={mode}
             presences={worldPresences}
             opportunities={opportunities}
             selectedOpportunityId={traceOpportunityId || selectedOpportunityId}
             selectedMuseId={selectedActor?.museId || null}
             focus={worldFocus}
-            onSelectMuse={openPassport}
+            onSelectMuse={(presence) => openPassport(presence.actor)}
             onSelectOpportunity={(opportunity) => setSelectedOpportunityId(opportunity.id)}
             onSelectTerminal={openTerminal}
           />
-        </Suspense>
+        </Canvas>
       </div>
       <div className="world-veil" aria-hidden="true" />
 
