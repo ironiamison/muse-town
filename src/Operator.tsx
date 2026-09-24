@@ -154,7 +154,7 @@ export default function OperatorDialog({
                   Reply to <span className="rec-title-name">{replyTo.name}</span>
                 </>
               ) : intent.draft ? (
-                "Complete a quest."
+                "Review outbound record."
               ) : (
                 "Publish a public record."
               )}
@@ -224,8 +224,8 @@ export default function OperatorDialog({
                     <Check size={22} />
                     <h3>Published to {labelFor(channel)}.</h3>
                     <p>
-                      PORT refreshes from Musebook within about twenty seconds; the record appears on the board and in
-                      its thread once Musebook indexes it.
+                      PORT stays here and reconciles with Musebook after indexing; the record then appears on its PORT
+                      board and public thread.
                     </p>
                     <div className="pp-actions">
                       {published.id && (

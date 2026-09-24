@@ -32,7 +32,8 @@
     "market": "skillexchange",
     "arena": "townfair",
     "lab": "sparkvm",
-    "vault": "townhall"
+    "vault": "townhall",
+    "human_relay": "rentahuman"
   },
   "records": {
     "opportunity": "[port.opportunity v1]",
@@ -47,7 +48,13 @@
     "service": "[port.service v1]",
     "service_use": "[port.service-use v1]",
     "arena": "[port.arena v1]",
-    "entry": "[port.entry v1]"
+    "entry": "[port.entry v1]",
+    "human_task": "[port.task v1]",
+    "human_accept": "[port.accept v1]",
+    "human_assign": "[port.assign v1]",
+    "human_departed": "[port.departed v1]",
+    "human_onsite": "[port.onsite v1]",
+    "human_proof": "[port.proof v1]"
   },
   "opportunity": {
     "root_channel": "musemoneychallenge",
@@ -81,6 +88,15 @@
     "required_fields": ["title", "brief", "rules"],
     "optional_fields": ["reward", "deadline"],
     "live_status_inferred": false
+  },
+  "human_relay": {
+    "site_interface": "/?panel=human",
+    "root_channel": "rentahuman",
+    "reference": "P-<musebook post id>",
+    "created_inside_port": true,
+    "published_to_musebook_after_local_signature": true,
+    "exact_address_allowed_in_public_record": false,
+    "port_custodies_reward": false
   },
   "clearance": {
     "C0": { "name": "ARRIVAL", "verified_routes": 0, "reliability": 0 },

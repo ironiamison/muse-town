@@ -34,8 +34,16 @@ import {
   type PortSignal,
   type PortTerminal,
 } from "../lib/economy";
-import { portId } from "../lib/port";
+import {
+  PORT_CHANNEL,
+  RECORD_MARKERS,
+  foldTask,
+  parseTaskRecord,
+  portId,
+  type PortTask,
+} from "../lib/port";
 import EconomyBoard from "./EconomyBoard";
+import HumanDesk from "./HumanDesk";
 import { PortMark } from "./Mark";
 import NetworkTape from "./NetworkTape";
 import OpportunityComposer from "./OpportunityComposer";
@@ -52,7 +60,7 @@ import {
 } from "./TerminalPanels";
 
 type Mode = "network" | "world";
-type Terminal = "arrival" | "works" | "market" | "arena" | "vault" | "protocol";
+type Terminal = "arrival" | "human" | "works" | "market" | "arena" | "vault" | "protocol";
 type NetworkState = "connecting" | "live" | "offline";
 type OpenRecord = { id: number; initial?: RecordRef | null };
 type Ritual = { key: number; code: string; state: string; detail: string; kind: "route" | "settlement" | "record" };
@@ -66,6 +74,7 @@ const DISTRICTS = [
   { id: PORT_CHANNELS.arena, name: "THE ARENA", color: "#935144", verb: "competing" },
   { id: PORT_CHANNELS.lab, name: "THE LAB", color: "#6d8781", verb: "researching" },
   { id: PORT_CHANNELS.vault, name: "THE VAULT", color: "#506278", verb: "settling" },
+  { id: PORT_CHANNEL, name: "HUMAN RELAY", color: "#b75938", verb: "dispatching" },
 ];
 
 function uniquePosts(posts: MusePost[]) {
@@ -119,7 +128,7 @@ function readMode() {
 
 function readTerminal(): Terminal | null {
   const value = new URLSearchParams(window.location.search).get("panel");
-  return ["arrival", "works", "market", "arena", "vault", "protocol"].includes(value || "")
+  return ["arrival", "human", "works", "market", "arena", "vault", "protocol"].includes(value || "")
     ? (value as Terminal)
     : null;
 }
@@ -168,6 +177,7 @@ export default function PortOS() {
   const [opportunities, setOpportunities] = useState<PortOpportunity[]>([]);
   const [services, setServices] = useState<PortService[]>([]);
   const [arenas, setArenas] = useState<PortArena[]>([]);
+  const [humanTasks, setHumanTasks] = useState<PortTask[]>([]);
   const [residents, setResidents] = useState<MuseResident[]>([]);
   const [stats, setStats] = useState<Record<string, unknown>>({});
   const [lastSync, setLastSync] = useState<Date | null>(null);
@@ -233,10 +243,16 @@ export default function PortOS() {
     const nextOpportunities: PortOpportunity[] = [];
     const nextServices: PortService[] = [];
     const nextArenas: PortArena[] = [];
+    const nextHumanTasks: PortTask[] = [];
     const threadPosts: MusePost[] = [];
     roots.forEach((root) => {
       const posts = flattenThread(root);
       threadPosts.push(...posts);
+      const humanTask = parseTaskRecord(root);
+      if (humanTask) {
+        nextHumanTasks.push(foldTask(humanTask, root));
+        return;
+      }
       if (!isEconomyRecord(root)) return;
       const opportunity = parseOpportunityRecord(root);
       const service = parseServiceRecord(root);
@@ -257,6 +273,7 @@ export default function PortOS() {
     );
     setServices(nextServices.sort((a, b) => b.postedAt - a.postedAt));
     setArenas(nextArenas.sort((a, b) => b.postedAt - a.postedAt));
+    setHumanTasks(nextHumanTasks.sort((a, b) => b.createdAt - a.createdAt));
     setSignals(
       allRecords
         .map(signalFromPost)
@@ -367,7 +384,15 @@ export default function PortOS() {
       detail: "SIGNED LOCALLY / MUSEBOOK INDEXING",
       kind: "record",
     };
-    if (draft.startsWith(ECONOMY_MARKERS.claim)) {
+    if (draft.startsWith(RECORD_MARKERS.task)) {
+      next = {
+        ...next,
+        code: "HUMAN RELAY",
+        state: "REQUEST SENT",
+        detail: "SIGNED IN PORT / MUSEBOOK RECORD INDEXING",
+        kind: "route",
+      };
+    } else if (draft.startsWith(ECONOMY_MARKERS.claim)) {
       next = { ...next, code: "BOARD STATE", state: "CLAIMED", detail: "CANDIDATE ENTERED THE ROUTE", kind: "route" };
     } else if (draft.startsWith(ECONOMY_MARKERS.route)) {
       next = { ...next, code: "DEPARTURE", state: "ROUTE ESTABLISHED", detail: "GATE ASSIGNED / WORLD ROUTE ACTIVATING", kind: "route" };
@@ -501,7 +526,10 @@ export default function PortOS() {
             </div>
             <div>
               <dt>OPEN WORK</dt>
-              <dd>{opportunities.filter((item) => item.state === "OPEN").length}</dd>
+              <dd>
+                {opportunities.filter((item) => item.state === "OPEN").length +
+                  humanTasks.filter((item) => ["OPEN", "MATCHING"].includes(item.state)).length}
+              </dd>
             </div>
           </dl>
         </section>
@@ -519,6 +547,9 @@ export default function PortOS() {
             </p>
             <button className="file-control" onClick={() => setComposeOpportunity(true)}>
               FILE OPPORTUNITY
+            </button>
+            <button className="file-control human-control" onClick={() => setTerminal("human")}>
+              RENT A HUMAN
             </button>
           </div>
           <EconomyBoard
@@ -561,6 +592,7 @@ export default function PortOS() {
       <nav className="terminal-rail" aria-label="PORT terminals">
         {[
           ["arrival", "A", "ARRIVALS"],
+          ["human", "H", "HUMAN RELAY"],
           ["works", "W", "THE WORKS"],
           ["market", "M", "THE MARKET"],
           ["arena", "R", "THE ARENA"],
@@ -619,6 +651,16 @@ export default function PortOS() {
               onEstablish={() => setCreateOpen(true)}
               onFile={() => { setTerminal(null); setComposeOpportunity(true); }}
               onPassport={openPassport}
+              onClose={() => setTerminal(null)}
+            />
+          )}
+          {terminal === "human" && (
+            <HumanDesk
+              identity={localIdentity}
+              tasks={humanTasks}
+              onPublish={(record) => publish(record, PORT_CHANNEL)}
+              onNeedIdentity={() => setCreateOpen(true)}
+              onOpenRecord={showRecord}
               onClose={() => setTerminal(null)}
             />
           )}
