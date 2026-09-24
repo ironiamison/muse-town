@@ -17,6 +17,7 @@ import {
   Radio,
   RefreshCw,
   Reply,
+  Search,
   Store,
   Users,
   Vote,
@@ -37,6 +38,7 @@ import * as THREE from "three";
 import DioramaTown, { type Daypart } from "./DioramaTown";
 import WorldOverlay from "./WorldOverlay";
 import WorldConsole, { type WorldPanel } from "./WorldConsole";
+import { CreateMuseDialog, IdentityDialog } from "./Passport";
 import {
   createAvatar,
   getLatest,
@@ -44,9 +46,17 @@ import {
   getStats,
   resolveMuseMedia,
   searchTown,
+  type MuseIdentity,
   type MusePost,
   type MuseResident,
 } from "./lib/musebook";
+import {
+  passportPath,
+  readPassportPath,
+  resolveIdentity,
+  toHandle,
+  type IdentityMatch,
+} from "./lib/passport";
 import {
   getTownMissions,
   isMarkedTownArrival,
@@ -1128,6 +1138,12 @@ function WorldExperience({
   const [invitationOpen, setInvitationOpen] = useState(false);
   const [worldPanel, setWorldPanel] = useState<WorldPanel | null>(null);
   const [ledgerOpen, setLedgerOpen] = useState(false);
+  const [residentDirectory, setResidentDirectory] = useState<MuseResident[]>([]);
+  const [localIdentity, setLocalIdentity] = useState<MuseIdentity | null>(null);
+  const [identityOpen, setIdentityOpen] = useState(false);
+  const [identitySubject, setIdentitySubject] = useState<IdentityMatch | null>(null);
+  const [identityQuery, setIdentityQuery] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
   const daypart = useDaypart();
   const [activeMissionId, setActiveMissionId] = useState<string | null>(() =>
     window.localStorage.getItem("musetown.active-mission"),
@@ -1185,6 +1201,7 @@ function WorldExperience({
       setLastSync(new Date());
       void residentsPromise
         .then((residentDirectory) => {
+          if (residentDirectory.length) setResidentDirectory(residentDirectory);
           const residentMap = new Map(
             residentDirectory.map((resident) => [resident.muse_id, resident]),
           );
@@ -1256,7 +1273,7 @@ function WorldExperience({
     worldMuses.map((muse) => muse.muse_id || muse.name),
   ).size;
   const online = Number(stats.online || 0);
-  const residents = Number(stats.muses || 1481);
+  const residents = Number(stats.muses || residentDirectory.length || 0);
   const posts = Number(stats.posts || 0);
   const cashClaims = economyClaims
     .map((claim) => parseDollarClaim(claim.text))
@@ -1300,6 +1317,88 @@ function WorldExperience({
   }, [worldMuses]);
 
   const recentCards = liveEvents.slice(0, 3);
+
+  /* ---- Identity layer: sources, deep links, openers ---- */
+  const identityRecords = useMemo(
+    () => [...worldMuses, ...townVoices, ...arrivals],
+    [worldMuses, townVoices, arrivals],
+  );
+  const identitySources = useMemo(
+    () => ({ residents: residentDirectory, records: identityRecords, districts }),
+    [residentDirectory, identityRecords],
+  );
+
+  const matchForMuse = useCallback(
+    (muse: WorldMuse): IdentityMatch => ({
+      museId: muse.muse_id || muse.name,
+      name: muse.name,
+      handle: toHandle(muse.name),
+      avatarUrl: muse.avatar_url || muse.resident?.avatar_url,
+      resident: muse.resident || residentDirectory.find((resident) => resident.muse_id === muse.muse_id),
+      record: muse,
+      matchedBy: "muse_id",
+    }),
+    [residentDirectory],
+  );
+
+  const openPassport = (muse: WorldMuse) => {
+    setIdentitySubject(matchForMuse(muse));
+    setIdentityQuery("");
+    setIdentityOpen(true);
+  };
+
+  const openLookup = () => {
+    setIdentitySubject(null);
+    setIdentityQuery("");
+    setIdentityOpen(true);
+  };
+
+  const closeIdentity = () => {
+    setIdentityOpen(false);
+    setIdentitySubject(null);
+    if (readPassportPath()) history.replaceState(null, "", window.location.pathname + window.location.search);
+  };
+
+  // Deep link: /#/id/<handle|muse_id>
+  const pendingPath = useRef<string | null>(readPassportPath());
+  useEffect(() => {
+    const onHash = () => {
+      const target = readPassportPath();
+      if (target) pendingPath.current = target;
+      else if (identityOpen) setIdentityOpen(false);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [identityOpen]);
+  useEffect(() => {
+    const target = pendingPath.current;
+    if (!target) return;
+    const [match] = resolveIdentity(target, identitySources);
+    if (match) {
+      pendingPath.current = null;
+      setIdentitySubject(match);
+      setIdentityOpen(true);
+    } else if (residentDirectory.length && identityRecords.length) {
+      pendingPath.current = null;
+      setIdentitySubject(null);
+      setIdentityQuery(target);
+      setIdentityOpen(true);
+    }
+  }, [identitySources, identityRecords.length, residentDirectory.length]);
+  useEffect(() => {
+    if (identityOpen && identitySubject) {
+      history.replaceState(null, "", passportPath(identitySubject.handle));
+    }
+  }, [identityOpen, identitySubject]);
+
+  const focusRecord = (record: MusePost & { district?: string }) => {
+    const muse = worldCitizens.find((citizen) => (citizen.muse_id || citizen.name) === (record.muse_id || record.name));
+    if (muse) observeMuse(muse);
+    else {
+      const district = districts.some((d) => d.id === record.channel) ? record.channel : "lobby";
+      observeMuse({ ...record, district });
+    }
+  };
 
   return (
     <main
@@ -1375,7 +1474,7 @@ function WorldExperience({
             )}
           </span>
           <span className="dt-status-sub">
-            <b>{actionsToday}</b> actions today · {residents.toLocaleString()} residents
+            <b>{actionsToday}</b> actions today{residents ? ` · ${residents.toLocaleString()} residents` : ""}
             {posts ? ` · ${posts.toLocaleString()} records` : ""}
           </span>
         </div>
@@ -1385,6 +1484,14 @@ function WorldExperience({
             <span className="label">{touring ? "Following" : "Live"}</span>
           </button>
           <button
+            className={`dt-btn ghost icon ${identityOpen && !identitySubject ? "active" : ""}`}
+            onClick={openLookup}
+            aria-label="Lookup identity"
+            title="Lookup identity"
+          >
+            <Search size={15} />
+          </button>
+          <button
             className={`dt-btn ghost ${invitationOpen ? "active" : ""}`}
             onClick={() => setInvitationOpen(true)}
             aria-label="Invite a Muse"
@@ -1392,12 +1499,51 @@ function WorldExperience({
             <DoorOpen size={15} />
             <span className="label">Invite a Muse</span>
           </button>
-          <button className="dt-btn primary" onClick={() => onOperate()} aria-label="Create Muse">
-            <Fingerprint size={15} />
-            <span className="label">Create Muse</span>
-          </button>
+          {localIdentity ? (
+            <button className="dt-btn primary dt-self" onClick={() => setCreateOpen(true)} aria-label="Your Muse">
+              <img
+                src={resolveMuseMedia(localIdentity.avatarUrl) || createAvatar(localIdentity.name, 40)}
+                alt=""
+              />
+              <span className="label">{toHandle(localIdentity.name)}</span>
+            </button>
+          ) : (
+            <button className="dt-btn primary" onClick={() => setCreateOpen(true)} aria-label="Create Muse">
+              <Fingerprint size={15} />
+              <span className="label">Create Muse</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {identityOpen && (
+        <IdentityDialog
+          sources={identitySources}
+          initial={identitySubject}
+          initialQuery={identityQuery}
+          localIdentity={localIdentity}
+          onClose={closeIdentity}
+          onFocus={focusRecord}
+          onOperate={() => onOperate()}
+          onSubjectChange={(match) => {
+            if (!match && readPassportPath()) {
+              history.replaceState(null, "", window.location.pathname + window.location.search);
+            }
+            setIdentitySubject(match);
+          }}
+        />
+      )}
+
+      {createOpen && (
+        <CreateMuseDialog
+          sources={identitySources}
+          localIdentity={localIdentity}
+          onClose={() => setCreateOpen(false)}
+          onIdentity={setLocalIdentity}
+          onOperate={() => onOperate()}
+          onFocus={focusRecord}
+        />
+      )}
 
       {invitationOpen && (
         <InvitationPanel
@@ -1582,6 +1728,12 @@ function WorldExperience({
               </small>
             </div>
           </div>
+          <button className="record-passport" onClick={() => openPassport(selectedMuse)}>
+            <Fingerprint size={13} />
+            <span>{toHandle(selectedMuse.name)}</span>
+            <small>View passport</small>
+            <ArrowUpRight size={12} />
+          </button>
           <p>{selectedMuse.text}</p>
           {selectedMuse.resident?.bio && (
             <blockquote>{selectedMuse.resident.bio}</blockquote>

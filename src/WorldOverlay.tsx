@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { anchorStore, type Anchor } from "./DioramaTown";
 import { createAvatar, resolveMuseMedia, type MusePost, type MuseResident } from "./lib/musebook";
+import { toHandle } from "./lib/passport";
 
 type District = {
   id: string;
@@ -159,6 +160,7 @@ export default function WorldOverlay({
                 <div className="dt-tip-head">
                   <strong>{muse.name}</strong>
                   {muse.id_verified && <i title="Identity verified" />}
+                  <code className="dt-tip-handle">{toHandle(muse.name)}</code>
                 </div>
                 <span className="dt-tip-verb">
                   {verb.charAt(0).toUpperCase() + verb.slice(1)} → {district?.name || "The Common"}
