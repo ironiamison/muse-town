@@ -7,8 +7,8 @@
  * upgraded into economic objects.
  */
 
-import type { MusePost, ThreadNode } from "./musebook";
-import { portId, screenTask } from "./port";
+import type { MusePost, ThreadNode } from "./musebook.js";
+import { portId, screenTask } from "./port.js";
 
 export const PORT_PROTOCOL_VERSION = "v1";
 
