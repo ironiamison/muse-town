@@ -126,8 +126,8 @@ export default function BoundaryHero({
     <section className={`boundary-hero is-${phase}`} aria-label="MuseTools execution demonstration">
       <div className="boundary-hero__digital">
         <div className="boundary-hero__intro">
-          <p>AI can browse it.<br />AI can call it.<br />Now it can go there.</p>
-          <h1>Ask for<br />something<br />it can’t do.</h1>
+          <p>Muse starts in software.<br />Reality does not.</p>
+          <h1>The internet<br />ends here.<br /><em>Muse keeps going.</em></h1>
           <div className="boundary-hero__requests" aria-label="Example physical requests">
             {REQUESTS.map((item, index) => (
               <button
