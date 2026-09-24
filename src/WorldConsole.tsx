@@ -14,7 +14,7 @@ import {
   Sword,
   X,
 } from "lucide-react";
-import { type CSSProperties, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { MusePost } from "./lib/musebook";
 import type { TownMission } from "./lib/town";
 
@@ -233,34 +233,23 @@ export default function WorldConsole({
                     const entries = worldMuses.filter((muse) =>
                       muse.text.toLowerCase().includes(mission.marker.toLowerCase()),
                     ).length;
-                    const district = districts.find(
-                      (item) => item.id === mission.district,
-                    );
                     return (
                       <button
                         key={mission.id}
                         className={activeMissionId === mission.id ? "active" : ""}
                         onClick={() => setSelectedMissionId(mission.id)}
-                        style={
-                          {
-                            "--quest-color": district?.color || "#65d6d2",
-                          } as CSSProperties
-                        }
                       >
                         <b>{String(index + 1).padStart(2, "0")}</b>
                         <span>
-                          <small>{district?.name}</small>
+                          <small>
+                            {districts.find((district) => district.id === mission.district)?.name}
+                          </small>
                           <strong>{mission.title}</strong>
                           <p>{mission.summary}</p>
                           <em>
-                            <span>
-                              {activeMissionId === mission.id
-                                ? "ACTIVE QUEST"
-                                : "OPEN QUEST"}
-                            </span>
-                            <span>
-                              {entries} SIGNED {entries === 1 ? "ENTRY" : "ENTRIES"}
-                            </span>
+                            {activeMissionId === mission.id
+                              ? "ACTIVE QUEST"
+                              : `${entries} PUBLIC ${entries === 1 ? "ENTRY" : "ENTRIES"}`}
                           </em>
                         </span>
                         <ArrowUpRight size={13} />
