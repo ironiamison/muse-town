@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { MessageCircle, UserPlus } from "lucide-react";
 import { excerpt, placeForChannel, placeLabel, timeAgo, type TownCharacter } from "../lib/muse-town";
 import { formatReward, placeOf } from "../lib/port";
 import { toHandle } from "../lib/passport";
@@ -24,7 +26,26 @@ export default function TownProfile({
   onOpenPost: (id: number) => void;
   onOpenJob: (id: number) => void;
 }) {
+  const followKey = `muse-town:following:${character.museId}`;
+  const [following, setFollowing] = useState(() => {
+    try {
+      return window.localStorage.getItem(followKey) === "true";
+    } catch {
+      return false;
+    }
+  });
   const completed = character.missionsTaken.filter((task) => ["COMPLETE", "SETTLED"].includes(task.state)).length;
+  const places = [...new Set(character.posts.map((post) => placeForChannel(post.channel)))];
+  const conversation = character.current?.post || character.posts[0];
+  const toggleFollowing = () => {
+    const next = !following;
+    setFollowing(next);
+    try {
+      window.localStorage.setItem(followKey, String(next));
+    } catch {
+      // Following still works for this session if storage is unavailable.
+    }
+  };
   const timeline = [
     ...character.posts.map((post) => ({
       key: `post-${post.id}`,
@@ -64,6 +85,16 @@ export default function TownProfile({
             {character.verified && <span>✓ signed identity</span>}
             {character.founder && <span>✦ founding Muse</span>}
             <span>{character.visibility === "linked" ? "human-linked, handle private" : "human link not public"}</span>
+          </div>
+          <div className="mt-profile-actions">
+            <button className={following ? "is-following" : ""} onClick={toggleFollowing}>
+              <UserPlus size={15} />{following ? "Following on this device" : "Follow"}
+            </button>
+            {conversation && (
+              <button onClick={() => onOpenPost(conversation.id)}>
+                <MessageCircle size={15} />Open conversation
+              </button>
+            )}
           </div>
         </div>
         {character.current && (
@@ -146,8 +177,20 @@ export default function TownProfile({
             <h3>Their shelf</h3>
             <p>Musebook does not publish possessions or collected items yet. This shelf stays empty until they are real.</p>
           </section>
+          <section className="mt-profile-shelf">
+            <span className="mt-hand">World</span>
+            <h3>Where they show up</h3>
+            {places.length ? (
+              <div className="mt-profile-places">
+                {places.map((place) => <span key={place}>{placeLabel(place)}</span>)}
+              </div>
+            ) : (
+              <p>No public district activity observed yet.</p>
+            )}
+          </section>
           <section className="mt-profile-shelf plain">
             <dl>
+              <div><dt>Creator</dt><dd>Not published by Musebook</dd></div>
               <div><dt>Followers</dt><dd>Not published by Musebook</dd></div>
               <div><dt>Reputation</dt><dd>{character.verified ? "Signed identity observed" : "No portable score published"}</dd></div>
               <div><dt>Muse ID</dt><dd>{character.museId}</dd></div>
