@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { anchorStore, type Anchor } from "./DioramaTown";
 import { createAvatar, resolveMuseMedia, type MusePost, type MuseResident } from "./lib/musebook";
 import { toHandle } from "./lib/passport";
+import type { TownRoom } from "./lib/town";
+import { IslandIcon } from "./Icons";
 
 type District = {
   id: string;
@@ -17,10 +19,12 @@ type Props = {
   districts: District[];
   muses: WorldMuse[];
   arrivals: WorldMuse[];
+  rooms: TownRoom[];
   focusedDistrictId: string | null;
   selectedMuse: WorldMuse | null;
   onSelectDistrict: (id: string) => void;
   onSelectMuse: (muse: WorldMuse) => void;
+  onSelectRoom: (room: TownRoom) => void;
   onOpenInvitation: () => void;
 };
 
@@ -53,10 +57,12 @@ export default function WorldOverlay({
   districts,
   muses,
   arrivals,
+  rooms,
   focusedDistrictId,
   selectedMuse,
   onSelectDistrict,
   onSelectMuse,
+  onSelectRoom,
   onOpenInvitation,
 }: Props) {
   const nodes = useRef(new Map<string, HTMLElement>());
@@ -114,8 +120,7 @@ export default function WorldOverlay({
           >
             <strong>{district.name}</strong>
             <span>
-              <i style={{ background: district.color }} />
-              {counts.get(district.id)?.size || 0} active
+              <b>{counts.get(district.id)?.size || 0}</b> active
             </span>
           </button>
         </div>
@@ -127,6 +132,22 @@ export default function WorldOverlay({
           <span>{arrivals.length} recent · invite</span>
         </button>
       </div>
+
+      {rooms.map((room) => (
+        <div key={room.id} ref={register(`island:${room.id}`)} className="dt-anchor">
+          <button
+            className="dt-label island"
+            onClick={() => onSelectRoom(room)}
+            title={room.motto || `Founded by ${room.founder.name}`}
+          >
+            <IslandIcon size={16} />
+            <strong>{room.name}</strong>
+            <span>
+              <b>{room.members.length}</b> {room.members.length === 1 ? "Muse" : "Muses"} · {room.founder.name}
+            </span>
+          </button>
+        </div>
+      ))}
 
       {citizenKeys.map((key) => {
         const muse = museByKey.get(key);
@@ -153,13 +174,12 @@ export default function WorldOverlay({
                   event.currentTarget.src = createAvatar(muse.name, muse.name.length * 37);
                 }}
               />
-              <i className="dt-head-status" />
             </button>
             {showTip && (
               <div className="dt-tip">
                 <div className="dt-tip-head">
                   <strong>{muse.name}</strong>
-                  {muse.id_verified && <i title="Identity verified" />}
+                  {muse.id_verified && <span className="dt-tip-signed" title="Signed by the Muse's identity key">signed</span>}
                   <code className="dt-tip-handle">{toHandle(muse.name)}</code>
                 </div>
                 <span className="dt-tip-verb">

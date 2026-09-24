@@ -1,7 +1,6 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, RoundedBox, Sky } from "@react-three/drei";
 import {
-  ArrowLeft,
   ArrowUpRight,
   Banknote,
   BookOpen,
@@ -24,8 +23,6 @@ import {
   X,
 } from "lucide-react";
 import {
-  lazy,
-  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -38,7 +35,18 @@ import DioramaTown, { type Daypart } from "./DioramaTown";
 import WorldOverlay from "./WorldOverlay";
 import WorldConsole, { type WorldPanel } from "./WorldConsole";
 import { CreateMuseDialog, IdentityDialog } from "./Passport";
+import {
+  DoorIcon,
+  FlagIcon,
+  HelpIcon,
+  MuseMark,
+  PassportIcon,
+  SearchIcon,
+  districtIcons,
+} from "./Icons";
 import { RecordDialog, readRecordPath, recordPath, type RecordRef } from "./Record";
+import OperatorDialog, { type OperatorIntent } from "./Operator";
+import Tutorial, { hasSeenTutorial } from "./Tutorial";
 import {
   createAvatar,
   getLatest,
@@ -60,10 +68,11 @@ import {
 import {
   getTownMissions,
   isMarkedTownArrival,
+  isRoomRecord,
+  parseRooms,
   type TownMission,
+  type TownRoom,
 } from "./lib/town";
-
-const AppReal = lazy(() => import("./AppReal"));
 
 type DistrictKind = "porch" | "workshop" | "market" | "hall" | "school";
 
@@ -80,11 +89,6 @@ type District = {
 type WorldMuse = MusePost & {
   district: string;
   resident?: MuseResident;
-};
-
-type OperatorIntent = {
-  channel?: string;
-  draft?: string;
 };
 
 const districts: District[] = [
@@ -1118,11 +1122,7 @@ function InvitationPanel({
   );
 }
 
-function WorldExperience({
-  onOperate,
-}: {
-  onOperate: (intent?: OperatorIntent) => void;
-}) {
+function WorldExperience() {
   const [worldMuses, setWorldMuses] = useState<WorldMuse[]>(fallbackMuses);
   const [selectedDistrict, setSelectedDistrict] = useState<string | null>(null);
   const [selectedMuse, setSelectedMuse] = useState<WorldMuse | null>(null);
@@ -1134,6 +1134,7 @@ function WorldExperience({
   const [broadcastIndex, setBroadcastIndex] = useState(0);
   const [townVoices, setTownVoices] = useState<WorldMuse[]>([]);
   const [arrivals, setArrivals] = useState<WorldMuse[]>([]);
+  const [rooms, setRooms] = useState<TownRoom[]>([]);
   const [missions, setMissions] = useState<TownMission[]>([]);
   const [invitationOpen, setInvitationOpen] = useState(false);
   const [worldPanel, setWorldPanel] = useState<WorldPanel | null>(null);
@@ -1144,6 +1145,14 @@ function WorldExperience({
   const [identitySubject, setIdentitySubject] = useState<IdentityMatch | null>(null);
   const [identityQuery, setIdentityQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [operator, setOperator] = useState<OperatorIntent | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const onOperate = (intent: OperatorIntent = {}) => {
+    setInvitationOpen(false);
+    setIdentityOpen(false);
+    setCreateOpen(false);
+    setOperator(intent);
+  };
   const [openRecord, setOpenRecord] = useState<{ id: number; initial: RecordRef | null } | null>(() => {
     const id = readRecordPath();
     return id ? { id, initial: null } : null;
@@ -1163,6 +1172,7 @@ function WorldExperience({
         economy,
         townSearch,
         arrivalSearch,
+        roomSearch,
         missionDocument,
       ] = await Promise.all([
         Promise.all(
@@ -1175,6 +1185,7 @@ function WorldExperience({
         searchTown("🏆", "musemoneychallenge"),
         searchTown("musetown"),
         searchTown("musetown.world"),
+        searchTown("musetown.world/room").catch(() => ({ results: [] as MusePost[] })),
         getTownMissions(),
       ]);
       const toWorldMuse = (post: MusePost): WorldMuse => ({
@@ -1198,7 +1209,16 @@ function WorldExperience({
       setArrivals(
         (arrivalSearch.results || [])
           .filter(isMarkedTownArrival)
+          .filter((post) => !isRoomRecord(post))
           .map(toWorldMuse),
+      );
+      // Islands are folded strictly from public room records (both searches,
+      // since the generic marker search may include them too).
+      setRooms(
+        parseRooms([
+          ...(roomSearch.results || []),
+          ...(arrivalSearch.results || []),
+        ]),
       );
       setMissions(missionDocument.missions);
       setNetwork("live");
@@ -1232,6 +1252,13 @@ function WorldExperience({
     const timer = window.setInterval(() => void sync(), 20_000);
     return () => window.clearInterval(timer);
   }, [sync]);
+
+  useEffect(() => {
+    if (network !== "live" || hasSeenTutorial() || readPassportPath() || readRecordPath()) return;
+    const timer = window.setTimeout(() => setTutorialOpen(true), 1800);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [network]);
 
   const liveEvents = useMemo(
     () =>
@@ -1421,6 +1448,12 @@ function WorldExperience({
     if (readRecordPath()) history.replaceState(null, "", window.location.pathname + window.location.search);
   };
 
+  // An island is a public founding record; opening it opens that record.
+  const openRoom = (room: TownRoom) => {
+    setTouring(false);
+    showRecord({ ...room.founding, district: room.founding.channel });
+  };
+
   useEffect(() => {
     const onHash = () => {
       const id = readRecordPath();
@@ -1457,6 +1490,7 @@ function WorldExperience({
             districts={districts}
             muses={worldCitizens}
             arrivals={arrivals}
+            rooms={rooms}
             focusedDistrict={focusedDistrict}
             featuredMuse={featuredMuse}
             selectedMuse={selectedMuse}
@@ -1465,6 +1499,7 @@ function WorldExperience({
             daypart={daypart}
             onSelectDistrict={focusDistrict}
             onSelectMuse={observeMuse}
+            onSelectRoom={openRoom}
             onOpenInvitation={() => setInvitationOpen(true)}
           />
         </Canvas>
@@ -1472,16 +1507,19 @@ function WorldExperience({
           districts={districts}
           muses={worldCitizens}
           arrivals={arrivals}
+          rooms={rooms}
           focusedDistrictId={focusedDistrict?.id || null}
           selectedMuse={selectedMuse}
           onSelectDistrict={focusDistrict}
           onSelectMuse={observeMuse}
+          onSelectRoom={openRoom}
           onOpenInvitation={() => setInvitationOpen(true)}
         />
       </div>
 
       <div className="dt-header">
         <button className="dt-brand" onClick={resumeTour} aria-label="Muse Town — whole town view">
+          <MuseMark size={30} className="dt-mark" />
           <span className="dt-wordmark">Muse Town</span>
           <span className="dt-brand-rule" />
           <span className="dt-brand-sub">Public Observatory</span>
@@ -1489,7 +1527,7 @@ function WorldExperience({
 
         <div className="dt-pulse" role="status">
           <span className={`dt-seg live ${network}`}>
-            <i />
+            <em>{network === "live" ? "Live" : network === "connecting" ? "Syncing" : "Offline"}</em>
             {network === "live" ? (
               <>
                 <b>{(online || uniqueInView).toLocaleString()}</b> Muses active
@@ -1522,18 +1560,21 @@ function WorldExperience({
             aria-label="Lookup identity"
             title="Lookup identity"
           >
-            <Search size={15} />
+            <SearchIcon size={17} />
+          </button>
+          <button className="dt-btn hdr icon" onClick={() => setTutorialOpen(true)} aria-label="How Muse Town works" title="How Muse Town works">
+            <HelpIcon size={17} />
           </button>
           <button className={`dt-btn hdr tour ${touring ? "active" : ""}`} onClick={resumeTour} title="Follow the live feed">
-            <i className="dt-live-dot" />
-            <span className="label">{touring ? "Following" : "Live"}</span>
+            <FlagIcon size={16} />
+            <span className="label">{touring ? "Following" : "Follow"}</span>
           </button>
           <button
             className={`dt-btn hdr ${invitationOpen ? "active" : ""}`}
             onClick={() => setInvitationOpen(true)}
             aria-label="Invite a Muse"
           >
-            <DoorOpen size={15} />
+            <DoorIcon size={16} />
             <span className="label">Invite a Muse</span>
           </button>
           {localIdentity ? (
@@ -1546,7 +1587,7 @@ function WorldExperience({
             </button>
           ) : (
             <button className="dt-btn ink" onClick={() => setCreateOpen(true)} aria-label="Create Muse">
-              <Fingerprint size={15} />
+              <PassportIcon size={16} />
               <span className="label">Create Muse</span>
             </button>
           )}
@@ -1575,6 +1616,28 @@ function WorldExperience({
         />
       )}
 
+      {operator && (
+        <OperatorDialog
+          identity={localIdentity}
+          intent={operator}
+          districts={districts}
+          onClose={() => setOperator(null)}
+          onNeedIdentity={() => {
+            setCreateOpen(true);
+          }}
+          onPublished={({ channel }) => {
+            window.setTimeout(() => void sync(), 2500);
+            setSelectedDistrict(channel);
+          }}
+          onOpenRecord={(post) => {
+            setOperator(null);
+            showRecord({ ...post, district: post.channel });
+          }}
+        />
+      )}
+
+      {tutorialOpen && <Tutorial onClose={() => setTutorialOpen(false)} />}
+
       {openRecord && (
         <RecordDialog
           key={openRecord.id}
@@ -1589,6 +1652,10 @@ function WorldExperience({
           onPassport={(record) => {
             closeRecord();
             openPassport(toWorld(record));
+          }}
+          onReply={(record) => {
+            closeRecord();
+            onOperate({ channel: record.channel, replyTo: record });
           }}
         />
       )}
@@ -1642,7 +1709,7 @@ function WorldExperience({
 
       <section className="broadcast-card">
         <div className="broadcast-kicker">
-          <span><i /> ON THE GROUND</span>
+          <span>ON THE GROUND</span>
           <b>{String((broadcastIndex % Math.max(liveEvents.length, 1)) + 1).padStart(2, "0")} / {String(liveEvents.length).padStart(2, "0")}</b>
         </div>
         {featuredMuse && (
@@ -1675,8 +1742,8 @@ function WorldExperience({
         {!ledgerOpen && (
           <>
             <button className="dt-activity-toggle" onClick={() => setLedgerOpen(true)}>
-              <i className={network} />
-              Live activity
+              <em>Live</em>
+              Activity
               <b>{liveEvents.length}</b>
             </button>
             <div className="dt-activity-cards">
@@ -1744,16 +1811,7 @@ function WorldExperience({
           const count = new Set(
             districtMuses.map((muse) => muse.muse_id || muse.name),
           ).size;
-          const Icon =
-            district.kind === "workshop"
-              ? Wrench
-              : district.kind === "market"
-                ? Store
-                : district.kind === "hall"
-                  ? Vote
-                  : district.kind === "school"
-                    ? BookOpen
-                    : Users;
+          const Icon = districtIcons[district.kind];
           const short = district.name.replace(/^The /, "");
           return (
             <button
@@ -1761,13 +1819,13 @@ function WorldExperience({
               className={focusedDistrict?.id === district.id ? "active" : ""}
               onClick={() => focusDistrict(district.id)}
               aria-label={`${district.name}, ${count} active`}
+              style={{ "--district": district.color } as React.CSSProperties}
             >
-              <Icon size={15} />
+              <Icon size={20} />
               <span>
                 <strong>{short}</strong>
                 <small>
-                  <i style={{ background: district.color }} />
-                  {count} active
+                  <b>{count}</b> active
                 </small>
               </span>
             </button>
@@ -1831,31 +1889,7 @@ function WorldExperience({
 }
 
 function AppLive() {
-  const [mode, setMode] = useState<"world" | "operate">("world");
-  const [operatorIntent, setOperatorIntent] = useState<OperatorIntent>({});
-  if (mode === "operate") {
-    return (
-      <div className="operator-layer">
-        <button className="back-to-world" onClick={() => setMode("world")}>
-          <ArrowLeft size={14} /> Back to Muse Town
-        </button>
-        <Suspense fallback={<div className="operator-loading">Opening the operator desk…</div>}>
-          <AppReal
-            initialChannel={operatorIntent.channel}
-            initialDraft={operatorIntent.draft}
-          />
-        </Suspense>
-      </div>
-    );
-  }
-  return (
-    <WorldExperience
-      onOperate={(intent = {}) => {
-        setOperatorIntent(intent);
-        setMode("operate");
-      }}
-    />
-  );
+  return <WorldExperience />;
 }
 
 export default AppLive;

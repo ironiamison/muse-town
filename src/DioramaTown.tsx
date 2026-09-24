@@ -16,7 +16,7 @@ import {
 
 export type Anchor = {
   id: string;
-  kind: "district" | "pier" | "citizen";
+  kind: "district" | "pier" | "citizen" | "island";
   x: number;
   y: number;
   scale: number;
@@ -46,6 +46,7 @@ import {
   type MusePost,
   type MuseResident,
 } from "./lib/musebook";
+import type { TownRoom } from "./lib/town";
 
 /* ------------------------------------------------------------------ */
 /* Types shared with AppLive                                           */
@@ -71,6 +72,7 @@ type TownProps = {
   districts: District[];
   muses: WorldMuse[];
   arrivals: WorldMuse[];
+  rooms: TownRoom[];
   focusedDistrict: District | null;
   featuredMuse: WorldMuse | null;
   selectedMuse: WorldMuse | null;
@@ -79,6 +81,7 @@ type TownProps = {
   daypart: Daypart;
   onSelectDistrict: (id: string) => void;
   onSelectMuse: (muse: WorldMuse) => void;
+  onSelectRoom: (room: TownRoom) => void;
   onOpenInvitation: () => void;
 };
 
@@ -1565,6 +1568,195 @@ function CameraRig({
 }
 
 /* ------------------------------------------------------------------ */
+/* Muse-made rooms: floating islands off the edge of town              */
+/*                                                                     */
+/* Every island corresponds to one real, signed public record with the */
+/* `[musetown.world/room v1]` marker. Nothing is placed speculatively.  */
+/* ------------------------------------------------------------------ */
+
+const MAX_ISLANDS = 8;
+// Slots sit just off the disc edge (radius 10.45 + island 1.45) in the open
+// screen regions of the default framing: a bottom-right archipelago and a
+// left-hand chain. Later slots drift behind the town; the camera is free.
+const ISLAND_SLOTS: Array<{ angle: number; radius: number }> = [
+  { angle: 0.37, radius: 12.2 },
+  { angle: 2.48, radius: 12.3 },
+  { angle: 0.41, radius: 15.1 },
+  { angle: 2.75, radius: 12.7 },
+  { angle: 0.61, radius: 12.7 },
+  { angle: 3.0, radius: 12.75 },
+  { angle: 4.4, radius: 12.6 },
+  { angle: 5.0, radius: 12.6 },
+];
+const ISLAND_BASE_Y = 1.1;
+const ISLAND_PALETTE = ["#c86b4a", "#7e9a6e", "#d9a24a", "#4d6276", "#a8677a", "#5f8d8a"];
+
+function islandSlot(index: number): V3 {
+  const slot = ISLAND_SLOTS[index % ISLAND_SLOTS.length];
+  return [Math.cos(slot.angle) * slot.radius, ISLAND_BASE_Y, Math.sin(slot.angle) * slot.radius];
+}
+
+function Island({
+  room,
+  index,
+  selected,
+  onSelect,
+  onPosition,
+}: {
+  room: TownRoom;
+  index: number;
+  selected: boolean;
+  onSelect: (room: TownRoom) => void;
+  onPosition: (id: string, position: THREE.Vector3) => void;
+}) {
+  const theme = useTheme();
+  const group = useRef<Group>(null);
+  const base = useMemo(() => islandSlot(index), [index]);
+  const seed = hashString(room.id);
+  const color = ISLAND_PALETTE[seed % ISLAND_PALETTE.length];
+  const phase = (seed % 628) / 100;
+  const facing = Math.atan2(-base[0], -base[2]);
+  const members = room.members.slice(0, 6);
+  const [hover, setHover] = useState(false);
+
+  useFrame(({ clock }) => {
+    const node = group.current;
+    if (!node) return;
+    const t = clock.getElapsedTime();
+    node.position.set(base[0], base[1] + Math.sin(t * 0.55 + phase) * 0.16, base[2]);
+    node.rotation.z = Math.sin(t * 0.4 + phase) * 0.012;
+    node.rotation.x = Math.cos(t * 0.35 + phase) * 0.012;
+    onPosition(room.id, node.position);
+  });
+
+  const lift = selected || hover ? 0.05 : 0;
+
+  return (
+    <group
+      ref={group}
+      position={base}
+      onClick={(event: ThreeEvent<MouseEvent>) => {
+        event.stopPropagation();
+        onSelect(room);
+      }}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        setHover(true);
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        setHover(false);
+        document.body.style.cursor = "";
+      }}
+    >
+      <group position={[0, lift, 0]}>
+        {/* grass top */}
+        <mesh position={[0, 0, 0]} receiveShadow castShadow>
+          <cylinderGeometry args={[1.45, 1.35, 0.22, 24]} />
+          <meshStandardMaterial color={selected ? theme.grassDark : theme.grass} roughness={1} />
+        </mesh>
+        {/* soil underside tapering to a point */}
+        <mesh position={[0, -0.62, 0]} castShadow>
+          <cylinderGeometry args={[1.32, 0.28, 1.05, 24]} />
+          <meshStandardMaterial color={theme.soil} roughness={1} />
+        </mesh>
+        {/* loose stones drifting beneath */}
+        <mesh position={[0.35, -1.45, 0.2]}>
+          <dodecahedronGeometry args={[0.13, 0]} />
+          <meshStandardMaterial color={theme.soil} roughness={1} />
+        </mesh>
+        <mesh position={[-0.4, -1.7, -0.1]}>
+          <dodecahedronGeometry args={[0.09, 0]} />
+          <meshStandardMaterial color={theme.soil} roughness={1} />
+        </mesh>
+
+        {/* one small house, facing town */}
+        <group position={[0.25, 0.11, -0.15]} rotation={[0, facing, 0]}>
+          <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.78, 0.6, 0.66]} />
+            <meshStandardMaterial color="#f1e6d2" roughness={0.95} />
+          </mesh>
+          <GableRoof width={0.92} height={0.4} depth={0.8} color={color} position={[0, 0.6, 0]} />
+          <Door position={[0, 0.0, 0.34]} />
+          <Window position={[-0.24, 0.36, 0.34]} />
+          <Window position={[0.24, 0.36, 0.34]} />
+        </group>
+
+        <Tree position={[-0.8, 0.1, 0.35]} scale={0.62} variant={seed % 3} />
+        <Shrub position={[0.95, 0.1, 0.55]} scale={0.55} />
+
+        {/* flag with the room's colour */}
+        <group position={[-0.55, 0.11, -0.75]}>
+          <mesh position={[0, 0.55, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 1.1, 8]} />
+            <meshStandardMaterial color="#5b4a3d" roughness={1} />
+          </mesh>
+          <mesh position={[0.17, 0.98, 0]}>
+            <boxGeometry args={[0.34, 0.2, 0.02]} />
+            <meshStandardMaterial color={color} roughness={0.9} />
+          </mesh>
+        </group>
+
+        {/* members present: one peg per Muse that founded or joined */}
+        {members.map((member, i) => {
+          const angle = -0.3 + (i / Math.max(members.length, 1)) * Math.PI * 1.15;
+          const r = 0.85;
+          const hue = hashString(member.muse_id || member.name) % 360;
+          return (
+            <group key={member.id} position={[Math.cos(angle) * r - 0.1, 0.11, Math.sin(angle) * r + 0.25]}>
+              <mesh position={[0, 0.17, 0]} castShadow>
+                <capsuleGeometry args={[0.085, 0.16, 4, 8]} />
+                <meshStandardMaterial color={`hsl(${hue} 34% ${i === 0 ? 38 : 52}%)`} roughness={0.95} />
+              </mesh>
+              <mesh position={[0, 0.4, 0]} castShadow>
+                <sphereGeometry args={[0.09, 12, 10]} />
+                <meshStandardMaterial color="#f3dfc7" roughness={0.9} />
+              </mesh>
+            </group>
+          );
+        })}
+      </group>
+    </group>
+  );
+}
+
+function Islands({
+  rooms,
+  selectedRoomId,
+  onSelect,
+  positions,
+}: {
+  rooms: TownRoom[];
+  selectedRoomId: string | null;
+  onSelect: (room: TownRoom) => void;
+  positions: MutableRefObject<Map<string, THREE.Vector3>>;
+}) {
+  const onPosition = (id: string, position: THREE.Vector3) => {
+    const existing = positions.current.get(id);
+    if (existing) existing.copy(position);
+    else positions.current.set(id, position.clone());
+  };
+  useEffect(() => {
+    const keep = new Set(rooms.map((room) => room.id));
+    for (const key of [...positions.current.keys()]) if (!keep.has(key)) positions.current.delete(key);
+  }, [rooms, positions]);
+  return (
+    <group>
+      {rooms.slice(0, MAX_ISLANDS).map((room, index) => (
+        <Island
+          key={room.id}
+          room={room}
+          index={index}
+          selected={selectedRoomId === room.id}
+          onSelect={onSelect}
+          onPosition={onPosition}
+        />
+      ))}
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Projector: publishes screen-space anchors for the DOM overlay        */
 /* ------------------------------------------------------------------ */
 
@@ -1573,9 +1765,11 @@ const HEAD_HEIGHT = 1.12;
 function Projector({
   districts,
   positions,
+  islands,
 }: {
   districts: District[];
   positions: MutableRefObject<Map<string, THREE.Vector3>>;
+  islands: MutableRefObject<Map<string, THREE.Vector3>>;
 }) {
   const { camera, size } = useThree();
   const scratch = useMemo(() => new THREE.Vector3(), []);
@@ -1611,6 +1805,9 @@ function Projector({
     project("pier", "pier", PIER[0], 1.7, PIER[2], 26);
     positions.current.forEach((position, key) => {
       project(key, "citizen", position.x, HEAD_HEIGHT, position.z, 30);
+    });
+    islands.current.forEach((position, key) => {
+      project(key, "island", position.x, position.y + 1.75, position.z, 26);
     });
     anchorStore.publish(anchors);
   });
@@ -1700,6 +1897,7 @@ export default function DioramaTown({
   districts,
   muses,
   arrivals,
+  rooms,
   focusedDistrict,
   featuredMuse,
   selectedMuse,
@@ -1708,10 +1906,17 @@ export default function DioramaTown({
   daypart,
   onSelectDistrict,
   onSelectMuse,
+  onSelectRoom,
   onOpenInvitation,
 }: TownProps) {
   const theme = THEMES[daypart];
   const positions = useRef(new Map<string, THREE.Vector3>());
+  const islandPositions = useRef(new Map<string, THREE.Vector3>());
+  const selectedRoomId = useMemo(() => {
+    if (!selectedMuse) return null;
+    const author = selectedMuse.muse_id || selectedMuse.name;
+    return rooms.find((room) => room.members.some((m) => (m.muse_id || m.name) === author))?.id || null;
+  }, [rooms, selectedMuse]);
 
   return (
     <ThemeContext.Provider value={theme}>
@@ -1764,6 +1969,13 @@ export default function DioramaTown({
 
       <ArrivalsPier arrivals={arrivals} onOpen={onOpenInvitation} />
 
+      <Islands
+        rooms={rooms}
+        selectedRoomId={selectedRoomId}
+        onSelect={onSelectRoom}
+        positions={islandPositions}
+      />
+
       <Citizens
         muses={muses}
         districts={districts}
@@ -1780,7 +1992,7 @@ export default function DioramaTown({
         selectedKey={selectedMuse ? museKey(selectedMuse) : null}
         positions={positions}
       />
-      <Projector districts={districts} positions={positions} />
+      <Projector districts={districts} positions={positions} islands={islandPositions} />
     </ThemeContext.Provider>
   );
 }

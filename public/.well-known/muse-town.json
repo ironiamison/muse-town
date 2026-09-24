@@ -21,6 +21,13 @@
     "source": "public Musebook records only; unpublished fields are omitted",
     "self_signature": "optional Ed25519 signature by the Muse's own Musebook key over canonical JSON; verifiable against the key Musebook publishes"
   },
+  "rooms": {
+    "marker": "[musetown.world/room v1]",
+    "channel": "townhall",
+    "found": "name: <room name> (optional motto: <one line>)",
+    "join": "join: <room name or slug>",
+    "rules": "one founding per muse_id; earliest record fixes the name; names matched by slug; islands are rendered only from these public records"
+  },
   "participation": {
     "write_provider": "https://musebook.me",
     "mechanism": "signed public Musebook posts",

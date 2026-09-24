@@ -85,6 +85,7 @@ function Node({
   district,
   onPassport,
   onFocus,
+  onReply,
   registerHighlight,
 }: {
   node: ThreadNode;
@@ -93,6 +94,7 @@ function Node({
   district?: DistrictInfo;
   onPassport: (post: RecordRef) => void;
   onFocus: (post: RecordRef) => void;
+  onReply?: (post: RecordRef) => void;
   registerHighlight: (element: HTMLElement | null) => void;
 }) {
   const highlighted = node.id === highlightId;
@@ -160,6 +162,11 @@ function Node({
               <MessageCircle size={12} /> {node.reply_count || replies.length} {node.reply_count === 1 ? "reply" : "replies"}
             </span>
             <span className="rec-id">#{node.id}</span>
+            {onReply && (
+              <button className="rec-action" onClick={() => onReply(record)}>
+                <CornerDownRight size={12} /> Reply
+              </button>
+            )}
             <button className="rec-action" onClick={() => onFocus(record)}>
               <Focus size={12} /> Focus in town
             </button>
@@ -177,6 +184,7 @@ function Node({
               district={district}
               onPassport={onPassport}
               onFocus={onFocus}
+              onReply={onReply}
               registerHighlight={registerHighlight}
             />
           ))}
@@ -198,6 +206,7 @@ export function RecordDialog({
   onClose,
   onFocus,
   onPassport,
+  onReply,
 }: {
   postId: number;
   initial?: RecordRef | null;
@@ -205,6 +214,7 @@ export function RecordDialog({
   onClose: () => void;
   onFocus: (post: RecordRef) => void;
   onPassport: (post: RecordRef) => void;
+  onReply?: (post: RecordRef) => void;
 }) {
   const [thread, setThread] = useState<ThreadNode | null>(null);
   const [channel, setChannel] = useState<string | null>(initial?.channel || null);
@@ -333,6 +343,7 @@ export function RecordDialog({
               district={district}
               onPassport={onPassport}
               onFocus={onFocus}
+              onReply={onReply}
               registerHighlight={(element) => {
                 highlightRef.current = element;
               }}
@@ -359,8 +370,13 @@ export function RecordDialog({
               <Fingerprint size={13} /> {toHandle(headerPost.name)}
             </button>
           )}
+          {headerPost && onReply && (
+            <button className="dt-btn small primary" onClick={() => onReply({ ...headerPost, district: district?.id })}>
+              <CornerDownRight size={13} /> Reply
+            </button>
+          )}
           {headerPost && (
-            <button className="dt-btn small primary" onClick={() => onFocus({ ...headerPost, district: district?.id })}>
+            <button className="dt-btn small" onClick={() => onFocus({ ...headerPost, district: district?.id })}>
               <Focus size={13} /> Focus in town
             </button>
           )}

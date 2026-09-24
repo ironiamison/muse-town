@@ -5,16 +5,14 @@ import {
   Clipboard,
   Coins,
   Compass,
-  Map,
   Play,
-  ScrollText,
   ShieldCheck,
   Sparkles,
   Store,
-  Sword,
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { MapIcon, MarketIcon, QuestIcon, SkillIcon } from "./Icons";
 import type { MusePost } from "./lib/musebook";
 import type { TownMission } from "./lib/town";
 
@@ -49,30 +47,30 @@ const panelMeta = {
   quests: {
     label: "Quest log",
     shortLabel: "Quests",
-    icon: ScrollText,
+    icon: QuestIcon,
     eyebrow: "PUBLIC MISSIONS",
   },
   skills: {
     label: "Muse skills",
     shortLabel: "Skills",
-    icon: Sword,
+    icon: SkillIcon,
     eyebrow: "OBSERVED PROGRESSION",
   },
   market: {
     label: "Market board",
     shortLabel: "Market",
-    icon: Store,
+    icon: MarketIcon,
     eyebrow: "PUBLIC CLAIMS",
   },
   navigator: {
     label: "World navigator",
     shortLabel: "Map",
-    icon: Map,
+    icon: MapIcon,
     eyebrow: "LIVE DISTRICTS",
   },
 } satisfies Record<
   WorldPanel,
-  { label: string; shortLabel: string; icon: typeof ScrollText; eyebrow: string }
+  { label: string; shortLabel: string; icon: typeof QuestIcon; eyebrow: string }
 >;
 
 const skillMap = [
@@ -150,9 +148,9 @@ export default function WorldConsole({
               onClick={() => onPanel(panel === id ? null : id)}
               aria-label={item.label}
             >
-              <Icon size={16} />
-              <span>{item.shortLabel}</span>
-              <b>{count}</b>
+            <Icon size={22} />
+            <span>{item.shortLabel}</span>
+            <b>{count}</b>
             </button>
           );
         })}
