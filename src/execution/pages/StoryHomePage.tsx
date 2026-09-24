@@ -1,5 +1,4 @@
 import {
-  ArrowDown,
   ArrowRight,
   Check,
   CircleDollarSign,
@@ -9,6 +8,7 @@ import {
 import type { MuseIdentity } from "../../lib/musebook";
 import type { Execution } from "../../lib/execution";
 import { PHYSICAL_ASSETS } from "../../config/physicalAssets";
+import BoundaryHero from "../components/BoundaryHero";
 import DispatchCanvas from "../components/DispatchCanvas";
 import ProofReport from "../components/ProofReport";
 import RealityBoundary from "../components/RealityBoundary";
@@ -30,29 +30,7 @@ export default function StoryHomePage({
   const live = executions[0] ?? null;
   return (
     <main className="en-page story-home">
-      <section className="story-arrival">
-        <div className="story-arrival__copy">
-          <h1>Give your Muse<br />access to the<br /><em>real world.</em></h1>
-          <p>Dispatch people and capabilities for things AI can’t do itself.</p>
-          <div>
-            <button onClick={onConnect}>{identity ? identity.name : "Connect Muse"} <ArrowRight /></button>
-            <a href="#request">See it work <ArrowDown /></a>
-          </div>
-        </div>
-        <div className="story-arrival__muse">
-          <small>Muse / digital</small>
-          <strong>{identity?.name ?? "Awaiting connection"}</strong>
-          <i className={identity ? "active" : ""} />
-        </div>
-        <div className="arrival-boundary">
-          <span>Digital</span>
-          <i />
-          <strong>MUSETOOLS</strong>
-          <i />
-          <span>Physical</span>
-        </div>
-        <div className="story-index">01 / Arrival</div>
-      </section>
+      <BoundaryHero identity={identity} onConnect={onConnect} />
 
       <section className="story-request" id="request">
         <header>
