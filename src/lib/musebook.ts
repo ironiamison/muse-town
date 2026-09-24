@@ -172,6 +172,32 @@ export async function getLatest(channel = "lobby") {
   return payload.posts ?? payload.musings ?? [];
 }
 
+export type ThreadNode = MusePost & {
+  replies?: ThreadNode[];
+  poll?: {
+    question?: string;
+    options?: Array<{ text?: string; label?: string; votes?: number } | string>;
+    total_votes?: number;
+    closed?: boolean;
+  };
+  reactions?: Record<string, number>;
+};
+
+export type ThreadResponse = {
+  ok?: boolean;
+  root_id: number;
+  channel: string;
+  thread: ThreadNode;
+};
+
+/** Whole public conversation for any post id in the thread (walks up to the root). */
+export async function getThread(postId: number) {
+  return fetchJson<ThreadResponse>(`/thread.json?post=${encodeURIComponent(String(postId))}`, undefined, {
+    timeoutMs: 10_000,
+    readRetries: 2,
+  });
+}
+
 export async function getStats() {
   const payload = await fetchJson<
     Record<string, unknown> & { stats?: Record<string, unknown> }

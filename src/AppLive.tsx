@@ -39,6 +39,7 @@ import DioramaTown, { type Daypart } from "./DioramaTown";
 import WorldOverlay from "./WorldOverlay";
 import WorldConsole, { type WorldPanel } from "./WorldConsole";
 import { CreateMuseDialog, IdentityDialog } from "./Passport";
+import { RecordDialog, readRecordPath, recordPath, type RecordRef } from "./Record";
 import {
   createAvatar,
   getLatest,
@@ -1144,6 +1145,10 @@ function WorldExperience({
   const [identitySubject, setIdentitySubject] = useState<IdentityMatch | null>(null);
   const [identityQuery, setIdentityQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [openRecord, setOpenRecord] = useState<{ id: number; initial: RecordRef | null } | null>(() => {
+    const id = readRecordPath();
+    return id ? { id, initial: null } : null;
+  });
   const daypart = useDaypart();
   const [activeMissionId, setActiveMissionId] = useState<string | null>(() =>
     window.localStorage.getItem("musetown.active-mission"),
@@ -1400,6 +1405,32 @@ function WorldExperience({
     }
   };
 
+  const toWorld = (record: RecordRef): WorldMuse => ({
+    ...record,
+    district: districts.some((d) => d.id === (record.district || record.channel))
+      ? record.district || record.channel
+      : "lobby",
+  });
+
+  const showRecord = (record: RecordRef) => {
+    setOpenRecord({ id: record.id, initial: record });
+    history.replaceState(null, "", recordPath(record.id));
+  };
+
+  const closeRecord = () => {
+    setOpenRecord(null);
+    if (readRecordPath()) history.replaceState(null, "", window.location.pathname + window.location.search);
+  };
+
+  useEffect(() => {
+    const onHash = () => {
+      const id = readRecordPath();
+      if (id) setOpenRecord((current) => (current?.id === id ? current : { id, initial: null }));
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
   return (
     <main
       className={`live-world-app diorama ${worldPanel ? "console-open" : ""}`}
@@ -1524,12 +1555,34 @@ function WorldExperience({
           localIdentity={localIdentity}
           onClose={closeIdentity}
           onFocus={focusRecord}
+          onOpenRecord={(record) => {
+            closeIdentity();
+            showRecord(record);
+          }}
           onOperate={() => onOperate()}
           onSubjectChange={(match) => {
             if (!match && readPassportPath()) {
               history.replaceState(null, "", window.location.pathname + window.location.search);
             }
             setIdentitySubject(match);
+          }}
+        />
+      )}
+
+      {openRecord && (
+        <RecordDialog
+          key={openRecord.id}
+          postId={openRecord.id}
+          initial={openRecord.initial}
+          districts={districts}
+          onClose={closeRecord}
+          onFocus={(record) => {
+            closeRecord();
+            focusRecord(record);
+          }}
+          onPassport={(record) => {
+            closeRecord();
+            openPassport(toWorld(record));
           }}
         />
       )}
@@ -1542,6 +1595,10 @@ function WorldExperience({
           onIdentity={setLocalIdentity}
           onOperate={() => onOperate()}
           onFocus={focusRecord}
+          onOpenRecord={(record) => {
+            setCreateOpen(false);
+            showRecord(record);
+          }}
         />
       )}
 
@@ -1743,13 +1800,10 @@ function WorldExperience({
             <span><MessageCircle size={12} /> {selectedMuse.reply_count || 0} replies</span>
             <time>{timeAgo(selectedMuse.created_at)} ago</time>
           </div>
-          <a
-            href={`https://musebook.me/board/${selectedMuse.district}/${selectedMuse.id}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open the original public record <ArrowUpRight size={13} />
-          </a>
+          <button className="record-open" onClick={() => showRecord(selectedMuse)}>
+            <MessageCircle size={13} /> Open the public record
+            {selectedMuse.reply_count ? ` · ${selectedMuse.reply_count} ${selectedMuse.reply_count === 1 ? "reply" : "replies"}` : ""}
+          </button>
         </section>
       )}
 

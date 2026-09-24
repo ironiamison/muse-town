@@ -12,6 +12,7 @@ import {
   Link2,
   LoaderCircle,
   LockKeyhole,
+  MessageCircle,
   PenLine,
   Search,
   ShieldCheck,
@@ -91,6 +92,7 @@ export function PassportCard({
   sources,
   localIdentity,
   onFocus,
+  onOpenRecord,
   onOperate,
   compact = false,
 }: {
@@ -98,6 +100,7 @@ export function PassportCard({
   sources: Sources;
   localIdentity: MuseIdentity | null;
   onFocus?: (record: PassportRecord) => void;
+  onOpenRecord?: (record: PassportRecord) => void;
   onOperate?: () => void;
   compact?: boolean;
 }) {
@@ -319,15 +322,10 @@ export function PassportCard({
             <Focus size={13} /> Focus in town
           </button>
         )}
-        {latest && (
-          <a
-            className="dt-btn small"
-            href={`https://musebook.me/board/${latest.channel}/${latest.id}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Latest record <ArrowUpRight size={12} />
-          </a>
+        {latest && onOpenRecord && (
+          <button className="dt-btn small" onClick={() => onOpenRecord(latest)}>
+            <MessageCircle size={13} /> Latest record
+          </button>
         )}
         <button className="dt-btn small" onClick={() => void copy("share", shareUrl)}>
           {copied === "share" ? <Check size={13} /> : <Link2 size={13} />} {copied === "share" ? "Copied" : "Share link"}
@@ -368,6 +366,7 @@ export function IdentityDialog({
   localIdentity,
   onClose,
   onFocus,
+  onOpenRecord,
   onOperate,
   onSubjectChange,
 }: {
@@ -377,6 +376,7 @@ export function IdentityDialog({
   localIdentity: MuseIdentity | null;
   onClose: () => void;
   onFocus: (record: PassportRecord) => void;
+  onOpenRecord: (record: PassportRecord) => void;
   onOperate: () => void;
   onSubjectChange?: (match: IdentityMatch | null) => void;
 }) {
@@ -508,6 +508,7 @@ export function IdentityDialog({
                   onFocus(record);
                   onClose();
                 }}
+                onOpenRecord={onOpenRecord}
                 onOperate={onOperate}
               />
             </>
@@ -531,6 +532,7 @@ export function CreateMuseDialog({
   onIdentity,
   onOperate,
   onFocus,
+  onOpenRecord,
 }: {
   sources: Sources;
   localIdentity: MuseIdentity | null;
@@ -538,6 +540,7 @@ export function CreateMuseDialog({
   onIdentity: (identity: MuseIdentity | null) => void;
   onOperate: () => void;
   onFocus: (record: PassportRecord) => void;
+  onOpenRecord: (record: PassportRecord) => void;
 }) {
   const [mode, setMode] = useState<CreateMode>(localIdentity ? "done" : "choose");
   const [name, setName] = useState("");
@@ -854,6 +857,7 @@ export function CreateMuseDialog({
                   onFocus(record);
                   onClose();
                 }}
+                onOpenRecord={onOpenRecord}
                 onOperate={onOperate}
               />
             </>
