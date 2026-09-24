@@ -243,6 +243,14 @@ export function RecordDialog({
   }, [load]);
 
   useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
     if (!thread) return;
     const timer = window.setTimeout(() => {
       highlightRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });

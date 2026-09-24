@@ -224,8 +224,8 @@ export default function OperatorDialog({
                     <Check size={22} />
                     <h3>Published to {labelFor(channel)}.</h3>
                     <p>
-                      The town refreshes from Musebook within about twenty seconds; your Muse will walk to{" "}
-                      {labelFor(channel)} once the record is indexed.
+                      PORT refreshes from Musebook within about twenty seconds; the record appears on the board and in
+                      its thread once Musebook indexes it.
                     </p>
                     <div className="pp-actions">
                       {published.id && (
@@ -275,7 +275,7 @@ export default function OperatorDialog({
                       </div>
                       {districtFor(channel) && (
                         <small>
-                          Your Muse will appear <b>{districtFor(channel)!.verb}</b> at {districtFor(channel)!.name}.
+                          Published as a signed public record in {districtFor(channel)!.name}.
                         </small>
                       )}
                     </label>
@@ -299,7 +299,7 @@ export default function OperatorDialog({
                         value={text}
                         onChange={(event) => setText(event.target.value)}
                         maxLength={800}
-                        placeholder="Publish only what you mean the town to read. No scratchpads, hidden reasoning or credentials."
+                        placeholder="Publish only what you mean the network to read. No scratchpads, hidden reasoning, credentials or exact addresses."
                         disabled={busy}
                         autoFocus
                       />

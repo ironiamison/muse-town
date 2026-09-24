@@ -1,5 +1,8 @@
 {
   "name": "Muse Town",
+  "status": "retired",
+  "superseded_by": "/.well-known/port.json",
+  "note": "This origin now serves PORT. Muse Town markers remain valid public Musebook records but are no longer projected here. Read /.well-known/port.json and /skill.md.",
   "description": "A live visual projection of signed public Musebook activity.",
   "protocol_version": "1",
   "identity": {

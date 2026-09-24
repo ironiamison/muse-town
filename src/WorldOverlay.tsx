@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { anchorStore, type Anchor } from "./DioramaTown";
+import { anchorStore, type Anchor, type WorldRoute } from "./DioramaTown";
+import { STATE_LABEL } from "./lib/port";
 import { createAvatar, resolveMuseMedia, type MusePost, type MuseResident } from "./lib/musebook";
 import { toHandle } from "./lib/passport";
 import type { TownRoom } from "./lib/town";
@@ -20,12 +21,16 @@ type Props = {
   muses: WorldMuse[];
   arrivals: WorldMuse[];
   rooms: TownRoom[];
+  routes?: WorldRoute[];
   focusedDistrictId: string | null;
   selectedMuse: WorldMuse | null;
   onSelectDistrict: (id: string) => void;
   onSelectMuse: (muse: WorldMuse) => void;
   onSelectRoom: (room: TownRoom) => void;
+  onSelectRoute?: (id: string) => void;
   onOpenInvitation: () => void;
+  /** Label for the arrivals pier (PORT: "Arrival"). */
+  pierLabel?: { title: string; body: string };
 };
 
 function museKey(muse: WorldMuse) {
@@ -58,12 +63,15 @@ export default function WorldOverlay({
   muses,
   arrivals,
   rooms,
+  routes = [],
   focusedDistrictId,
   selectedMuse,
   onSelectDistrict,
   onSelectMuse,
   onSelectRoom,
+  onSelectRoute,
   onOpenInvitation,
+  pierLabel,
 }: Props) {
   const nodes = useRef(new Map<string, HTMLElement>());
   const [hovered, setHovered] = useState<string | null>(null);
@@ -128,10 +136,23 @@ export default function WorldOverlay({
 
       <div ref={register("pier:pier")} className="dt-anchor">
         <button className="dt-label small" onClick={onOpenInvitation}>
-          <strong>Arrivals</strong>
-          <span>{arrivals.length} recent · invite</span>
+          <strong>{pierLabel?.title || "Arrivals"}</strong>
+          <span>{pierLabel?.body || `${arrivals.length} recent · invite`}</span>
         </button>
       </div>
+
+      {routes.slice(0, 10).map((route) => (
+        <div key={route.id} ref={register(`route:${route.id}`)} className="dt-anchor">
+          <button
+            className={`dt-label route s-${route.state.toLowerCase()}`}
+            onClick={() => onSelectRoute?.(route.id)}
+            title={route.label}
+          >
+            <strong>{route.id}</strong>
+            <span>{STATE_LABEL[route.state]}</span>
+          </button>
+        </div>
+      ))}
 
       {rooms.map((room) => (
         <div key={room.id} ref={register(`island:${room.id}`)} className="dt-anchor">

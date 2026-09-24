@@ -16,7 +16,7 @@ import {
 
 export type Anchor = {
   id: string;
-  kind: "district" | "pier" | "citizen" | "island";
+  kind: "district" | "pier" | "citizen" | "island" | "route";
   x: number;
   y: number;
   scale: number;
@@ -47,6 +47,10 @@ import {
   type MuseResident,
 } from "./lib/musebook";
 import type { TownRoom } from "./lib/town";
+import { ROUTE_STATIONS, stationIndex, type TaskState } from "./lib/port";
+
+/** A PORT route on the plate: one per task whose executor has departed. */
+export type WorldRoute = { id: string; state: TaskState; label: string; seed: number };
 
 /* ------------------------------------------------------------------ */
 /* Types shared with AppLive                                           */
@@ -73,6 +77,8 @@ type TownProps = {
   muses: WorldMuse[];
   arrivals: WorldMuse[];
   rooms: TownRoom[];
+  routes?: WorldRoute[];
+  onSelectRoute?: (id: string) => void;
   focusedDistrict: District | null;
   featuredMuse: WorldMuse | null;
   selectedMuse: WorldMuse | null;
@@ -114,45 +120,48 @@ type Theme = {
 };
 
 const THEMES: Record<Daypart, Theme> = {
+  /* PORT: the plate is a concrete apron — the machine side. The table beyond
+     is the human world. Neutral hall light; the only saturated colour on the
+     plate is PORT signal orange, carried by routes and THE BOARD. */
   day: {
-    background: "#f3ecdd",
-    fog: "#f3ecdd",
-    table: "#efe6d4",
-    grass: "#9fb58f",
-    grassDark: "#8aa27c",
-    soil: "#b89a78",
-    path: "#dcc9a6",
-    plaza: "#d8cbb4",
-    water: "#8fb6bd",
-    waterDeep: "#6f98a3",
-    sunColor: "#fff2dc",
-    sunIntensity: 2.6,
+    background: "#e6e1d6",
+    fog: "#e6e1d6",
+    table: "#d8d2c5",
+    grass: "#b8b4a9",
+    grassDark: "#a6a297",
+    soil: "#5e5b55",
+    path: "#d3cec2",
+    plaza: "#c9c4b8",
+    water: "#6f7680",
+    waterDeep: "#575d67",
+    sunColor: "#fff6e8",
+    sunIntensity: 2.5,
     sunPosition: [8, 14, 6],
-    hemiSky: "#e9f0f5",
-    hemiGround: "#b9a98c",
+    hemiSky: "#eef0f2",
+    hemiGround: "#8f8b82",
     hemiIntensity: 0.9,
-    ambient: 0.35,
+    ambient: 0.36,
     windowGlow: 0,
     lampGlow: 0,
     lampLight: 0,
-    exposure: 1.05,
+    exposure: 1.04,
   },
   sunset: {
-    background: "#f0d9c4",
-    fog: "#f0d9c4",
-    table: "#e8cfb6",
-    grass: "#9aa985",
-    grassDark: "#83967a",
-    soil: "#b08c6a",
-    path: "#d8bd98",
-    plaza: "#d3bfa4",
-    water: "#b3a0a4",
-    waterDeep: "#8a7a86",
+    background: "#e2d7c8",
+    fog: "#e2d7c8",
+    table: "#d2c7b6",
+    grass: "#b1aa9c",
+    grassDark: "#9e978a",
+    soil: "#57524b",
+    path: "#cfc4b3",
+    plaza: "#c3b9a8",
+    water: "#7b7376",
+    waterDeep: "#5f585d",
     sunColor: "#ffb774",
-    sunIntensity: 2.4,
+    sunIntensity: 2.3,
     sunPosition: [-12, 6, 8],
-    hemiSky: "#f4c8a8",
-    hemiGround: "#8b6f60",
+    hemiSky: "#f0cdb0",
+    hemiGround: "#7c6c60",
     hemiIntensity: 0.75,
     ambient: 0.3,
     windowGlow: 1.6,
@@ -161,21 +170,21 @@ const THEMES: Record<Daypart, Theme> = {
     exposure: 1.0,
   },
   night: {
-    background: "#1b2335",
-    fog: "#1b2335",
-    table: "#202a3e",
-    grass: "#3f5a58",
-    grassDark: "#34494a",
-    soil: "#3a3f4b",
-    path: "#6d7580",
-    plaza: "#5f6874",
-    water: "#2f4a5e",
-    waterDeep: "#233a4b",
-    sunColor: "#9db4ff",
+    background: "#0f1114",
+    fog: "#0f1114",
+    table: "#141619",
+    grass: "#2a2d33",
+    grassDark: "#23262b",
+    soil: "#1a1c20",
+    path: "#4a4e56",
+    plaza: "#3d4149",
+    water: "#1e2530",
+    waterDeep: "#161c25",
+    sunColor: "#9fb0d8",
     sunIntensity: 0.9,
     sunPosition: [-6, 12, -8],
-    hemiSky: "#5a6f9a",
-    hemiGround: "#1a2230",
+    hemiSky: "#4a5566",
+    hemiGround: "#101216",
     hemiIntensity: 0.7,
     ambient: 0.28,
     windowGlow: 2.8,
@@ -430,18 +439,18 @@ function Pond() {
       <group position={[-0.05, 0.22, 0.05]} rotation={[0, Math.PI / 4, 0]}>
         <mesh castShadow receiveShadow>
           <boxGeometry args={[0.9, 0.08, 3.1]} />
-          <meshStandardMaterial color="#8a6a4e" roughness={0.9} />
+          <meshStandardMaterial color="#55555a" roughness={0.9} />
         </mesh>
         {[-0.4, 0.4].map((x) => (
           <group key={x}>
             <mesh position={[x, 0.22, 0]}>
               <boxGeometry args={[0.05, 0.05, 3.0]} />
-              <meshStandardMaterial color="#6e533d" />
+              <meshStandardMaterial color="#3f3f44" />
             </mesh>
             {[-1.3, -0.65, 0, 0.65, 1.3].map((z) => (
               <mesh key={z} position={[x, 0.12, z]}>
                 <boxGeometry args={[0.05, 0.24, 0.05]} />
-                <meshStandardMaterial color="#6e533d" />
+                <meshStandardMaterial color="#3f3f44" />
               </mesh>
             ))}
           </group>
@@ -472,7 +481,7 @@ function Tree({ position, scale = 1, variant = 0 }: { position: V3; scale?: numb
     <group position={position} scale={scale}>
       <mesh position={[0, 0.42, 0]} castShadow>
         <cylinderGeometry args={[0.07, 0.11, 0.84, 8]} />
-        <meshStandardMaterial color="#7a5a42" roughness={1} />
+        <meshStandardMaterial color="#4a4a4f" roughness={1} />
       </mesh>
       <group ref={canopy} position={[0, 0.82, 0]}>
         <mesh position={[0, 0.34, 0]} castShadow>
@@ -497,11 +506,11 @@ function Shrub({ position, scale = 1 }: { position: V3; scale?: number }) {
     <group position={position} scale={scale}>
       <mesh position={[0, 0.2, 0]} castShadow>
         <sphereGeometry args={[0.28, 10, 7]} />
-        <meshStandardMaterial color="#7d9a68" roughness={1} flatShading />
+        <meshStandardMaterial color="#8e968a" roughness={1} flatShading />
       </mesh>
       <mesh position={[0.2, 0.16, 0.08]} castShadow>
         <sphereGeometry args={[0.2, 10, 7]} />
-        <meshStandardMaterial color="#8faa74" roughness={1} flatShading />
+        <meshStandardMaterial color="#9aa295" roughness={1} flatShading />
       </mesh>
     </group>
   );
@@ -540,11 +549,11 @@ function Bench({ position, rotation = 0 }: { position: V3; rotation?: number }) 
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 0.22, 0]} castShadow>
         <boxGeometry args={[0.7, 0.05, 0.24]} />
-        <meshStandardMaterial color="#9a7455" roughness={0.9} />
+        <meshStandardMaterial color="#6a6a70" roughness={0.9} />
       </mesh>
       <mesh position={[0, 0.4, -0.1]} rotation={[-0.15, 0, 0]} castShadow>
         <boxGeometry args={[0.7, 0.26, 0.04]} />
-        <meshStandardMaterial color="#9a7455" roughness={0.9} />
+        <meshStandardMaterial color="#6a6a70" roughness={0.9} />
       </mesh>
       {[-0.28, 0.28].map((x) => (
         <mesh key={x} position={[x, 0.1, 0]}>
@@ -580,7 +589,7 @@ function Crate({ position, rotation = 0, size = 0.32 }: { position: V3; rotation
   return (
     <mesh position={[position[0], position[1] + size / 2, position[2]]} rotation={[0, rotation, 0]} castShadow>
       <boxGeometry args={[size, size, size]} />
-      <meshStandardMaterial color="#b98a5e" roughness={1} />
+      <meshStandardMaterial color="#8c8a84" roughness={1} />
     </mesh>
   );
 }
@@ -594,7 +603,7 @@ function Mailbox({ position }: { position: V3 }) {
       </mesh>
       <mesh position={[0, 0.66, 0]} castShadow>
         <boxGeometry args={[0.18, 0.16, 0.26]} />
-        <meshStandardMaterial color="#c96a4a" roughness={0.7} />
+        <meshStandardMaterial color="#2c2e33" roughness={0.7} />
       </mesh>
     </group>
   );
@@ -632,7 +641,7 @@ function Window({
   );
 }
 
-function Door({ position, rotation = 0, color = "#5b4a3d" }: { position: V3; rotation?: number; color?: string }) {
+function Door({ position, rotation = 0, color = "#45444a" }: { position: V3; rotation?: number; color?: string }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh>
@@ -729,11 +738,11 @@ function CommonsPlaza({ color }: { color: string }) {
             <group position={[Math.cos(angle + 0.42) * 2.45, 0.21, Math.sin(angle + 0.42) * 2.45]}>
               <mesh position={[0, 0.14, 0]} castShadow>
                 <cylinderGeometry args={[0.22, 0.18, 0.28, 12]} />
-                <meshStandardMaterial color="#c96a4a" roughness={1} />
+                <meshStandardMaterial color="#2c2e33" roughness={1} />
               </mesh>
               <mesh position={[0, 0.38, 0]}>
                 <sphereGeometry args={[0.22, 10, 7]} />
-                <meshStandardMaterial color="#7d9a68" flatShading roughness={1} />
+                <meshStandardMaterial color="#8e968a" flatShading roughness={1} />
               </mesh>
             </group>
           </group>
@@ -767,13 +776,13 @@ function WorksBuilding({ color }: { color: string }) {
       {/* flat roof + sawtooth skylights */}
       <mesh position={[0, 1.73, -0.5]} castShadow>
         <boxGeometry args={[3.5, 0.08, 2.3]} />
-        <meshStandardMaterial color="#b8583c" roughness={0.9} />
+        <meshStandardMaterial color="#24262b" roughness={0.9} />
       </mesh>
       {[-1.13, 0, 1.13].map((x) => (
         <group key={x} position={[x, 1.77, -0.5]}>
           <mesh position={[0.12, 0.26, 0]} rotation={[0, 0, -0.5]} castShadow>
             <boxGeometry args={[1.05, 0.06, 2.1]} />
-            <meshStandardMaterial color="#c96a4a" roughness={0.9} />
+            <meshStandardMaterial color="#2c2e33" roughness={0.9} />
           </mesh>
           <mesh position={[-0.42, 0.25, 0]}>
             <boxGeometry args={[0.05, 0.5, 2.05]} />
@@ -806,7 +815,7 @@ function WorksBuilding({ color }: { color: string }) {
       </mesh>
       <mesh position={[2.0, 0.98, -0.5]} rotation={[0, 0, -0.32]} castShadow>
         <boxGeometry args={[1.05, 0.05, 1.7]} />
-        <meshStandardMaterial color="#b8583c" roughness={0.9} />
+        <meshStandardMaterial color="#24262b" roughness={0.9} />
       </mesh>
       {/* gear */}
       <mesh ref={wheel} position={[-1.85, 1.15, -0.5]} rotation={[0, Math.PI / 2, 0]} castShadow>
@@ -819,7 +828,7 @@ function WorksBuilding({ color }: { color: string }) {
       <Crate position={[1.55, 0.52, 1.35]} rotation={0.5} size={0.22} />
       <mesh position={[-1.7, 0.42, 1.5]} castShadow>
         <cylinderGeometry args={[0.18, 0.18, 0.44, 12]} />
-        <meshStandardMaterial color="#8a6a4e" roughness={1} />
+        <meshStandardMaterial color="#55555a" roughness={1} />
       </mesh>
       <Sign position={[0, 1.95, 0.64]} color="#3b4650" width={1.4} />
       <Lamp position={[2.0, 0.2, 1.7]} />
@@ -829,9 +838,9 @@ function WorksBuilding({ color }: { color: string }) {
 
 function MarketRow({ color }: { color: string }) {
   const stalls = [
-    { x: -1.5, wall: "#f0dfc4", awning: "#c96a4a" },
-    { x: 0, wall: "#e6cfae", awning: "#5b7f6a" },
-    { x: 1.5, wall: "#f2e4cf", awning: "#d9a066" },
+    { x: -1.5, wall: "#f0dfc4", awning: "#2c2e33" },
+    { x: 0, wall: "#e6cfae", awning: "#3d4b46" },
+    { x: 1.5, wall: "#f2e4cf", awning: "#7a7f88" },
   ];
   return (
     <group>
@@ -848,11 +857,11 @@ function MarketRow({ color }: { color: string }) {
           {/* roof */}
           <mesh position={[0, 1.82 + (i % 2) * 0.25, -0.4]} rotation={[0, 0, 0]} castShadow>
             <boxGeometry args={[1.56, 0.12, 2.05]} />
-            <meshStandardMaterial color={i === 1 ? "#b8583c" : "#8a6a4e"} roughness={0.9} />
+            <meshStandardMaterial color={i === 1 ? "#24262b" : "#55555a"} roughness={0.9} />
           </mesh>
           <mesh position={[0, 2.05 + (i % 2) * 0.25, -0.4]} castShadow>
             <boxGeometry args={[1.2, 0.34, 1.7]} />
-            <meshStandardMaterial color={i === 1 ? "#c96a4a" : "#9c7a5d"} roughness={0.9} />
+            <meshStandardMaterial color={i === 1 ? "#2c2e33" : "#9c7a5d"} roughness={0.9} />
           </mesh>
           {/* awning (striped) */}
           <group position={[0, 1.3, 0.85]} rotation={[0.42, 0, 0]}>
@@ -864,17 +873,17 @@ function MarketRow({ color }: { color: string }) {
             ))}
           </group>
           <Window position={[0, 0.9, 0.56]} size={[0.8, 0.5]} />
-          <Door position={[0.0, 0.55, 0.56]} color="#6b4e3a" />
+          <Door position={[0.0, 0.55, 0.56]} color="#3a3a3f" />
           {/* counter / stall */}
           <mesh position={[0, 0.42, 1.35]} castShadow>
             <boxGeometry args={[1.0, 0.46, 0.44]} />
-            <meshStandardMaterial color="#9a7455" roughness={1} />
+            <meshStandardMaterial color="#6a6a70" roughness={1} />
           </mesh>
           {[0, 1, 2].map((g) => (
             <mesh key={g} position={[-0.3 + g * 0.3, 0.72, 1.35]} castShadow>
               <sphereGeometry args={[0.09, 8, 6]} />
               <meshStandardMaterial
-                color={["#c96a4a", "#e0b25a", "#7d9a68"][(g + i) % 3]}
+                color={["#2c2e33", "#b9b3a4", "#8e968a"][(g + i) % 3]}
                 roughness={0.8}
               />
             </mesh>
@@ -922,7 +931,7 @@ function AssemblyHall({ color }: { color: string }) {
         <boxGeometry args={[3.4, 0.22, 2.1]} />
         <meshStandardMaterial color="#e8dcc6" roughness={1} />
       </mesh>
-      <GableRoof width={3.5} height={0.7} depth={2.2} color="#c96a4a" position={[0, 2.06, 0.1]} />
+      <GableRoof width={3.5} height={0.7} depth={2.2} color="#2c2e33" position={[0, 2.06, 0.1]} />
       {/* dome */}
       <mesh position={[0, 2.05, -0.6]} castShadow>
         <cylinderGeometry args={[0.7, 0.7, 0.3, 24]} />
@@ -934,7 +943,7 @@ function AssemblyHall({ color }: { color: string }) {
       </mesh>
       <mesh position={[0, 2.95, -0.6]}>
         <cylinderGeometry args={[0.03, 0.03, 0.35, 6]} />
-        <meshStandardMaterial color="#e0b25a" metalness={0.5} roughness={0.4} />
+        <meshStandardMaterial color="#b9b3a4" metalness={0.5} roughness={0.4} />
       </mesh>
       <Door position={[0, 0.85, 0.46]} color="#3b4650" />
       <Window position={[-0.9, 1.25, 0.46]} size={[0.3, 0.5]} />
@@ -973,7 +982,7 @@ function SchoolAcademy({ color }: { color: string }) {
         <boxGeometry args={[2.6, 1.7, 1.9]} />
         <meshStandardMaterial color="#e9d6b8" roughness={1} />
       </mesh>
-      <GableRoof width={2.9} height={0.95} depth={2.1} color="#5b7f6a" position={[0, 1.9, -0.6]} />
+      <GableRoof width={2.9} height={0.95} depth={2.1} color="#3d4b46" position={[0, 1.9, -0.6]} />
       {/* wings */}
       {[-1.9, 1.9].map((x) => (
         <group key={x} position={[x, 0, 0.3]}>
@@ -981,13 +990,13 @@ function SchoolAcademy({ color }: { color: string }) {
             <boxGeometry args={[1.1, 1.1, 2.4]} />
             <meshStandardMaterial color="#f0e2c9" roughness={1} />
           </mesh>
-          <GableRoof width={1.3} height={0.55} depth={2.6} color="#b8583c" position={[0, 1.3, 0]} />
+          <GableRoof width={1.3} height={0.55} depth={2.6} color="#24262b" position={[0, 1.3, 0]} />
           <Window position={[x < 0 ? 0.56 : -0.56, 0.75, 0.3]} size={[0.3, 0.42]} rotation={x < 0 ? Math.PI / 2 : -Math.PI / 2} />
           <Window position={[x < 0 ? 0.56 : -0.56, 0.75, -0.5]} size={[0.3, 0.42]} rotation={x < 0 ? Math.PI / 2 : -Math.PI / 2} />
         </group>
       ))}
       {/* arched entry + tall windows */}
-      <Door position={[0, 0.65, 0.36]} color="#5b7f6a" />
+      <Door position={[0, 0.65, 0.36]} color="#3d4b46" />
       {[-0.8, 0.8].map((x) => (
         <Window key={x} position={[x, 1.1, 0.36]} size={[0.34, 0.8]} />
       ))}
@@ -1002,13 +1011,13 @@ function SchoolAcademy({ color }: { color: string }) {
       </mesh>
       <mesh position={[1.05, 3.05, -1.2]}>
         <sphereGeometry args={[0.1, 10, 8]} />
-        <meshStandardMaterial color="#e0b25a" metalness={0.5} roughness={0.4} />
+        <meshStandardMaterial color="#b9b3a4" metalness={0.5} roughness={0.4} />
       </mesh>
       {/* book stack + reading bench in courtyard */}
       {[0, 1, 2].map((i) => (
         <mesh key={i} position={[-1.4 + i * 0.02, 0.25 + i * 0.1, 1.5]} rotation={[0, i * 0.3, 0]} castShadow>
           <boxGeometry args={[0.36, 0.1, 0.26]} />
-          <meshStandardMaterial color={["#c96a4a", "#5b7f6a", "#e0b25a"][i]} roughness={1} />
+          <meshStandardMaterial color={["#2c2e33", "#3d4b46", "#b9b3a4"][i]} roughness={1} />
         </mesh>
       ))}
       <Bench position={[1.3, 0.21, 1.6]} rotation={Math.PI} />
@@ -1082,7 +1091,7 @@ function DistrictGround({
         <group ref={beacon} position={[0, 3.6, 0]}>
           <mesh>
             <octahedronGeometry args={[0.22, 0]} />
-            <meshStandardMaterial color="#ffd9a3" emissive="#c96a4a" emissiveIntensity={1.6} toneMapped={false} />
+            <meshStandardMaterial color="#ffd9a3" emissive="#ff4d0d" emissiveIntensity={1.6} toneMapped={false} />
           </mesh>
         </group>
       )}
@@ -1101,12 +1110,12 @@ function ArrivalsPier({ arrivals, onOpen }: { arrivals: WorldMuse[]; onOpen: () 
     <group position={PIER}>
       <mesh position={[0, 0.18, 0]} receiveShadow castShadow>
         <boxGeometry args={[2.2, 0.1, 1.6]} />
-        <meshStandardMaterial color="#8a6a4e" roughness={1} />
+        <meshStandardMaterial color="#55555a" roughness={1} />
       </mesh>
       {[-0.9, -0.3, 0.3, 0.9].map((x) => (
         <mesh key={x} position={[x, 0.2, 0]}>
           <boxGeometry args={[0.03, 0.02, 1.55]} />
-          <meshStandardMaterial color="#6e533d" />
+          <meshStandardMaterial color="#3f3f44" />
         </mesh>
       ))}
       <Fence position={[0, 0.22, -0.78]} length={2.1} />
@@ -1251,7 +1260,7 @@ function Citizen({
       {(selected || featured) && (
         <mesh ref={ring} position={[0, 0.225, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.34, 0.42, 32]} />
-          <meshBasicMaterial color={selected ? "#c96a4a" : color} transparent opacity={0.85} toneMapped={false} />
+          <meshBasicMaterial color={selected ? "#2c2e33" : color} transparent opacity={0.85} toneMapped={false} />
         </mesh>
       )}
       <group userData={{ body: true }}>
@@ -1267,7 +1276,7 @@ function Citizen({
         </mesh>
         <mesh position={[0.15, 0.6, 0.02]} castShadow>
           <boxGeometry args={[0.08, 0.12, 0.16]} />
-          <meshStandardMaterial color="#8a6a4e" roughness={1} />
+          <meshStandardMaterial color="#55555a" roughness={1} />
         </mesh>
         {/* neck / head core (the PFP disc is drawn by the DOM overlay) */}
         <mesh position={[0, 0.98, 0]} castShadow>
@@ -1414,7 +1423,7 @@ function Citizens({
           <Citizen
             key={state.key}
             state={state}
-            color={district?.color || "#c96a4a"}
+            color={district?.color || "#2c2e33"}
             selected={selectedKey === state.key}
             featured={featuredKey === state.key && selectedKey !== state.key}
             onSelect={onSelect}
@@ -1689,7 +1698,7 @@ function Island({
         <group position={[-0.55, 0.11, -0.75]}>
           <mesh position={[0, 0.55, 0]}>
             <cylinderGeometry args={[0.02, 0.02, 1.1, 8]} />
-            <meshStandardMaterial color="#5b4a3d" roughness={1} />
+            <meshStandardMaterial color="#45444a" roughness={1} />
           </mesh>
           <mesh position={[0.17, 0.98, 0]}>
             <boxGeometry args={[0.34, 0.2, 0.02]} />
@@ -1757,6 +1766,224 @@ function Islands({
 }
 
 /* ------------------------------------------------------------------ */
+/* PORT routes: intent leaving the plate                                */
+/*                                                                     */
+/* A route exists only for a task whose assigned executor published a  */
+/* departure record. It starts at THE BOARD, crosses the plate edge     */
+/* through a threshold, and ends at an execution terminal in the human  */
+/* world beyond. Stations along it are the nine lifecycle states.        */
+/* ------------------------------------------------------------------ */
+
+const PLATE_RADIUS = 10.45;
+const TERMINAL_RADIUS = 13.2;
+const ROUTE_SIGNAL = "#ff4d0d";
+const ROUTE_SETTLED = "#3f9a63";
+const ROUTE_ENDED = "#6b6a63";
+/* The default camera looks along ~0.92 rad. Routes leave through two fans
+   either side of that axis so their terminals stay inside the frame. */
+const ROUTE_FANS: Array<[number, number]> = [
+  [1.86, 2.26], // left-front
+  [0.28, 0.56], // right-front
+];
+
+function routeAngle(index: number) {
+  const fan = ROUTE_FANS[index % ROUTE_FANS.length];
+  const slot = Math.floor(index / ROUTE_FANS.length);
+  const steps = 5;
+  const t = (slot % steps) / (steps - 1);
+  return fan[0] + (fan[1] - fan[0]) * t;
+}
+
+function Route({
+  route,
+  index,
+  onSelect,
+  onPosition,
+}: {
+  route: WorldRoute;
+  index: number;
+  onSelect?: (id: string) => void;
+  onPosition: (id: string, position: THREE.Vector3) => void;
+}) {
+  const theme = useTheme();
+  const angle = routeAngle(index);
+  const dir = useMemo(() => new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)), [angle]);
+  const curve = useMemo(() => {
+    // leaves the plaza, bends once, crosses the rim straight, ends at the terminal
+    const bend = (route.seed % 2 === 0 ? 1 : -1) * 0.5;
+    const a = dir.clone().multiplyScalar(2.25);
+    const b = dir.clone().multiplyScalar(PLATE_RADIUS - 2.4).add(new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(bend));
+    const c = dir.clone().multiplyScalar(PLATE_RADIUS + 0.4);
+    const d = dir.clone().multiplyScalar(TERMINAL_RADIUS);
+    return new THREE.CatmullRomCurve3([a, b, c, d], false, "catmullrom", 0.2);
+  }, [dir, route.seed]);
+  const ribbon = useMemo(() => ribbonGeometry(curve, 0.24, 64, 0.155), [curve]);
+  const edge = useMemo(() => ribbonGeometry(curve, 0.32, 64, 0.15), [curve]);
+  const current = stationIndex(route.state);
+  const ended = current === -1;
+  const settled = route.state === "SETTLED";
+  const colour = settled ? ROUTE_SETTLED : ended ? ROUTE_ENDED : ROUTE_SIGNAL;
+  const terminal = useMemo(() => curve.getPointAt(1), [curve]);
+  const gate = useMemo(() => curve.getPointAt(curve.getUtoTmapping(0, (PLATE_RADIUS - 2.25) / (TERMINAL_RADIUS - 2.25))), [curve]);
+  const gateAngle = useMemo(() => Math.atan2(dir.x, dir.z), [dir]);
+  const bar = useRef<Mesh>(null);
+
+  useFrame(({ clock }) => {
+    onPosition(route.id, terminal);
+    if (!bar.current || ended) return;
+    // the running bar travels between the current station and the next
+    const t0 = current / (ROUTE_STATIONS.length - 1);
+    const t1 = Math.min(1, (current + 1) / (ROUTE_STATIONS.length - 1));
+    const t = t0 + ((clock.getElapsedTime() * 0.35 + index * 0.37) % 1) * (t1 - t0);
+    const p = curve.getPointAt(t);
+    const tan = curve.getTangentAt(t);
+    bar.current.position.set(p.x, 0.24, p.z);
+    bar.current.rotation.y = Math.atan2(tan.x, tan.z);
+  });
+
+  return (
+    <group
+      onClick={(e: ThreeEvent<MouseEvent>) => {
+        e.stopPropagation();
+        onSelect?.(route.id);
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        document.body.style.cursor = onSelect ? "pointer" : "";
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = "";
+      }}
+    >
+      {/* dark edge + signal ribbon */}
+      <mesh geometry={edge} receiveShadow>
+        <meshStandardMaterial color={theme.soil} roughness={1} />
+      </mesh>
+      <mesh geometry={ribbon} receiveShadow>
+        <meshStandardMaterial color={colour} emissive={colour} emissiveIntensity={theme.lampGlow > 0 ? 0.55 : 0} roughness={0.85} />
+      </mesh>
+
+      {/* station blocks */}
+      {ROUTE_STATIONS.map((station, i) => {
+        const t = i / (ROUTE_STATIONS.length - 1);
+        const p = curve.getPointAt(t);
+        const tan = curve.getTangentAt(t);
+        const passed = i < current || settled;
+        const here = i === current && !settled;
+        const h = passed ? 0.18 : here ? 0.26 : 0.05;
+        return (
+          <mesh key={station} position={[p.x, 0.16 + h / 2, p.z]} rotation={[0, Math.atan2(tan.x, tan.z), 0]} castShadow={passed || here}>
+            <boxGeometry args={[0.4, h, 0.12]} />
+            <meshStandardMaterial color={here ? "#f6f1e6" : passed ? "#15161a" : theme.soil} roughness={0.9} />
+          </mesh>
+        );
+      })}
+
+      {/* running bar */}
+      {!ended && (
+        <mesh ref={bar} castShadow>
+          <boxGeometry args={[0.36, 0.05, 0.08]} />
+          <meshStandardMaterial color="#f6f1e6" emissive={colour} emissiveIntensity={0.35} roughness={0.6} />
+        </mesh>
+      )}
+
+      {/* departure post at the plate edge: a slim gate the route passes under */}
+      <group position={[gate.x, 0.16, gate.z]} rotation={[0, gateAngle, 0]}>
+        <mesh position={[-0.42, 0.55, 0]} castShadow>
+          <boxGeometry args={[0.1, 1.1, 0.1]} />
+          <meshStandardMaterial color="#15161a" roughness={0.9} />
+        </mesh>
+        <mesh position={[0.42, 0.55, 0]} castShadow>
+          <boxGeometry args={[0.1, 1.1, 0.1]} />
+          <meshStandardMaterial color="#15161a" roughness={0.9} />
+        </mesh>
+        <mesh position={[0, 1.13, 0]} castShadow>
+          <boxGeometry args={[0.98, 0.08, 0.14]} />
+          <meshStandardMaterial color={colour} roughness={0.9} />
+        </mesh>
+      </group>
+
+      {/* execution terminal beyond the plate */}
+      <group position={[terminal.x, 0, terminal.z]}>
+        <mesh position={[0, 0.05, 0]} receiveShadow castShadow>
+          <boxGeometry args={[1.5, 0.22, 1.5]} />
+          <meshStandardMaterial color={theme.plaza} roughness={1} />
+        </mesh>
+        <mesh position={[0, 0.9, 0]} castShadow>
+          <boxGeometry args={[0.1, 1.5, 0.1]} />
+          <meshStandardMaterial color="#15161a" roughness={0.9} />
+        </mesh>
+        <mesh position={[0.24, 1.5, 0]} castShadow>
+          <boxGeometry args={[0.48, 0.26, 0.03]} />
+          <meshStandardMaterial color={colour} roughness={0.9} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/** The permanent threshold: PORT's edge, facing the camera. Routes pass beside it. */
+function Threshold() {
+  const angle = 0.78; // right of the camera axis, fully in frame at the default view
+  const dir = useMemo(() => new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle)), []);
+  const p = dir.clone().multiplyScalar(PLATE_RADIUS - 0.35);
+  const rot = Math.atan2(dir.x, dir.z);
+  return (
+    <group position={[p.x, 0.16, p.z]} rotation={[0, rot, 0]}>
+      {/* two piers and a lintel; a gap in the plate rim that reads as a door */}
+      <mesh position={[-1.05, 0.65, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.22, 1.3, 0.4]} />
+        <meshStandardMaterial color="#15161a" roughness={0.9} />
+      </mesh>
+      <mesh position={[1.05, 0.65, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.22, 1.3, 0.4]} />
+        <meshStandardMaterial color="#15161a" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 1.36, 0]} castShadow>
+        <boxGeometry args={[2.4, 0.14, 0.4]} />
+        <meshStandardMaterial color="#15161a" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 1.36, 0.21]}>
+        <boxGeometry args={[1.9, 0.07, 0.02]} />
+        <meshStandardMaterial color={ROUTE_SIGNAL} roughness={0.8} />
+      </mesh>
+      {/* apron slab crossing the rim */}
+      <mesh position={[0, -0.12, 0.5]} receiveShadow>
+        <boxGeometry args={[2.2, 0.1, 2.0]} />
+        <meshStandardMaterial color="#c9c4b8" roughness={1} />
+      </mesh>
+    </group>
+  );
+}
+
+function Routes({
+  routes,
+  onSelect,
+  positions,
+}: {
+  routes: WorldRoute[];
+  onSelect?: (id: string) => void;
+  positions: MutableRefObject<Map<string, THREE.Vector3>>;
+}) {
+  const onPosition = (id: string, position: THREE.Vector3) => {
+    const existing = positions.current.get(id);
+    if (existing) existing.copy(position);
+    else positions.current.set(id, position.clone());
+  };
+  useEffect(() => {
+    const keep = new Set(routes.map((r) => r.id));
+    for (const key of [...positions.current.keys()]) if (!keep.has(key)) positions.current.delete(key);
+  }, [routes, positions]);
+  return (
+    <group>
+      {routes.slice(0, 10).map((route, index) => (
+        <Route key={route.id} route={route} index={index} onSelect={onSelect} onPosition={onPosition} />
+      ))}
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Projector: publishes screen-space anchors for the DOM overlay        */
 /* ------------------------------------------------------------------ */
 
@@ -1766,10 +1993,12 @@ function Projector({
   districts,
   positions,
   islands,
+  routes,
 }: {
   districts: District[];
   positions: MutableRefObject<Map<string, THREE.Vector3>>;
   islands: MutableRefObject<Map<string, THREE.Vector3>>;
+  routes: MutableRefObject<Map<string, THREE.Vector3>>;
 }) {
   const { camera, size } = useThree();
   const scratch = useMemo(() => new THREE.Vector3(), []);
@@ -1808,6 +2037,9 @@ function Projector({
     });
     islands.current.forEach((position, key) => {
       project(key, "island", position.x, position.y + 1.75, position.z, 26);
+    });
+    routes.current.forEach((position, key) => {
+      project(key, "route", position.x, position.y + 1.7, position.z, 26);
     });
     anchorStore.publish(anchors);
   });
@@ -1871,12 +2103,12 @@ function Scenery() {
         <group key={i} position={position as V3}>
           <mesh receiveShadow>
             <boxGeometry args={[1.1, 0.08, 0.6]} />
-            <meshStandardMaterial color="#7a5a42" roughness={1} />
+            <meshStandardMaterial color="#4a4a4f" roughness={1} />
           </mesh>
           {[-0.35, 0, 0.35].map((x) => (
             <mesh key={x} position={[x, 0.12, 0]}>
               <sphereGeometry args={[0.12, 8, 6]} />
-              <meshStandardMaterial color={["#c96a4a", "#e0b25a", "#d98aa0"][(i + Math.round(x * 3) + 3) % 3]} roughness={1} />
+              <meshStandardMaterial color={["#2c2e33", "#b9b3a4", "#d98aa0"][(i + Math.round(x * 3) + 3) % 3]} roughness={1} />
             </mesh>
           ))}
         </group>
@@ -1898,6 +2130,8 @@ export default function DioramaTown({
   muses,
   arrivals,
   rooms,
+  routes = [],
+  onSelectRoute,
   focusedDistrict,
   featuredMuse,
   selectedMuse,
@@ -1912,6 +2146,7 @@ export default function DioramaTown({
   const theme = THEMES[daypart];
   const positions = useRef(new Map<string, THREE.Vector3>());
   const islandPositions = useRef(new Map<string, THREE.Vector3>());
+  const routePositions = useRef(new Map<string, THREE.Vector3>());
   const selectedRoomId = useMemo(() => {
     if (!selectedMuse) return null;
     const author = selectedMuse.muse_id || selectedMuse.name;
@@ -1976,6 +2211,9 @@ export default function DioramaTown({
         positions={islandPositions}
       />
 
+      <Threshold />
+      <Routes routes={routes} onSelect={onSelectRoute} positions={routePositions} />
+
       <Citizens
         muses={muses}
         districts={districts}
@@ -1992,7 +2230,7 @@ export default function DioramaTown({
         selectedKey={selectedMuse ? museKey(selectedMuse) : null}
         positions={positions}
       />
-      <Projector districts={districts} positions={positions} islands={islandPositions} />
+      <Projector districts={districts} positions={positions} islands={islandPositions} routes={routePositions} />
     </ThemeContext.Provider>
   );
 }

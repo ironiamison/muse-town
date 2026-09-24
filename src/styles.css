@@ -78,7 +78,7 @@ button {
   mix-blend-mode: screen;
 }
 
-header {
+.app > header {
   position: absolute;
   z-index: 10;
   top: 0;
@@ -123,13 +123,13 @@ header {
   transform: rotate(-45deg);
 }
 
-nav {
+.app nav {
   display: flex;
   align-items: center;
   gap: 34px;
 }
 
-nav button {
+.app nav button {
   border: 0;
   padding: 8px 0;
   background: none;
@@ -1078,7 +1078,7 @@ nav .nav-cta {
     min-height: 560px;
   }
 
-  header {
+  .app > header {
     height: 70px;
     padding: 0 20px;
   }
