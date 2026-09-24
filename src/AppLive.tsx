@@ -1,4 +1,4 @@
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Html, RoundedBox, Sky } from "@react-three/drei";
 import {
   ArrowLeft,
@@ -34,7 +34,7 @@ import {
 } from "react";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
-import CinematicTown from "./CinematicTown";
+import LivingBlock from "./LivingBlock";
 import WorldConsole, { type WorldPanel } from "./WorldConsole";
 import {
   createAvatar,
@@ -1044,6 +1044,7 @@ function WorldExperience({
   const [missions, setMissions] = useState<TownMission[]>([]);
   const [invitationOpen, setInvitationOpen] = useState(false);
   const [worldPanel, setWorldPanel] = useState<WorldPanel | null>(null);
+  const [ledgerOpen, setLedgerOpen] = useState(false);
   const [activeMissionId, setActiveMissionId] = useState<string | null>(() =>
     window.localStorage.getItem("musetown.active-mission"),
   );
@@ -1213,39 +1214,19 @@ function WorldExperience({
       className={`live-world-app cinematic-town ${worldPanel ? "console-open" : ""}`}
     >
       <div className="town-canvas">
-        <Canvas
-          dpr={[1, 1.25]}
-          frameloop="demand"
-          shadows
-          fallback={
-            <div className="webgl-fallback">
-              <strong>Muse Town needs WebGL.</strong>
-              <span>The live ledger and operator desk are still available.</span>
-            </div>
-          }
-          camera={{ position: [11.5, 8.4, 13.5], fov: 39, near: 0.1, far: 100 }}
-          gl={{
-            antialias: true,
-            toneMapping: THREE.ACESFilmicToneMapping,
-            toneMappingExposure: 1.08,
-            powerPreference: "high-performance",
-            preserveDrawingBuffer: navigator.webdriver,
-          }}
-        >
-          <CinematicTown
-            districts={districts}
-            muses={worldCitizens}
-            arrivals={arrivals}
-            focusedDistrict={focusedDistrict}
-            featuredMuse={featuredMuse}
-            selectedMuse={selectedMuse}
-            claimTotal={claimTotal}
-            questDistrictId={activeMission?.district || null}
-            onSelectDistrict={focusDistrict}
-            onSelectMuse={observeMuse}
-            onOpenInvitation={() => setInvitationOpen(true)}
-          />
-        </Canvas>
+        <LivingBlock
+          districts={districts}
+          muses={worldCitizens}
+          arrivals={arrivals}
+          focusedDistrict={focusedDistrict}
+          featuredMuse={featuredMuse}
+          selectedMuse={selectedMuse}
+          claimTotal={claimTotal}
+          questDistrictId={activeMission?.district || null}
+          onSelectDistrict={focusDistrict}
+          onSelectMuse={observeMuse}
+          onOpenInvitation={() => setInvitationOpen(true)}
+        />
       </div>
       <div className="cinematic-atmosphere" />
 
@@ -1347,15 +1328,31 @@ function WorldExperience({
         )}
       </section>
 
-      <aside className="activity-ledger">
+      {!ledgerOpen && (
+        <button
+          className="ledger-tab"
+          onClick={() => setLedgerOpen(true)}
+          aria-label="Open town ledger"
+        >
+          <Eye size={13} />
+          <span>Ledger</span>
+          <strong>{liveEvents.length}</strong>
+        </button>
+      )}
+      <aside className={`activity-ledger ${ledgerOpen ? "" : "collapsed"}`}>
         <div className="ledger-heading">
           <div>
             <span>PUBLIC ACTIVITY</span>
             <strong>Town ledger</strong>
           </div>
-          <button onClick={() => void sync()} aria-label="Refresh activity">
-            <RefreshCw size={13} />
-          </button>
+          <div className="ledger-actions">
+            <button onClick={() => void sync()} aria-label="Refresh activity">
+              <RefreshCw size={13} />
+            </button>
+            <button onClick={() => setLedgerOpen(false)} aria-label="Close ledger">
+              <X size={13} />
+            </button>
+          </div>
         </div>
         <div className="ledger-list">
           {liveEvents.slice(0, 10).map((muse) => (
