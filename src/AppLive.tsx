@@ -1518,65 +1518,79 @@ function WorldExperience() {
       </div>
 
       <div className="dt-header">
+        {/* Brand capsule — floats, pinned top-left */}
         <button className="dt-brand" onClick={resumeTour} aria-label="Muse Town — whole town view">
-          <MuseMark size={30} className="dt-mark" />
+          <MuseMark size={26} className="dt-mark" />
           <span className="dt-wordmark">Muse Town</span>
           <span className="dt-brand-rule" />
           <span className="dt-brand-sub">Public Observatory</span>
         </button>
 
-        <div className="dt-pulse" role="status">
-          <span className={`dt-seg live ${network}`}>
-            <em>{network === "live" ? "Live" : network === "connecting" ? "Syncing" : "Offline"}</em>
-            {network === "live" ? (
-              <>
-                <b>{(online || uniqueInView).toLocaleString()}</b> Muses active
-              </>
-            ) : network === "connecting" ? (
-              "Connecting to Musebook"
-            ) : (
-              "Last public records"
+        {/* Nav pill — live pulse + icon dock, floats centered */}
+        <div className="dt-nav">
+          <div className="dt-pulse" role="status">
+            <span className={`dt-seg live ${network}`}>
+              <em>{network === "live" ? "Live" : network === "connecting" ? "Syncing" : "Offline"}</em>
+              {network === "live" ? (
+                <>
+                  <b>{(online || uniqueInView).toLocaleString()}</b> active
+                </>
+              ) : network === "connecting" ? (
+                "Connecting"
+              ) : (
+                "Last records"
+              )}
+            </span>
+            <span className="dt-seg">
+              <b>{actionsToday.toLocaleString()}</b> today
+            </span>
+            {residents > 0 && (
+              <span className="dt-seg wide">
+                <b>{residents.toLocaleString()}</b> residents
+              </span>
             )}
-          </span>
-          <span className="dt-seg">
-            <b>{actionsToday.toLocaleString()}</b> actions today
-          </span>
-          {residents > 0 && (
-            <span className="dt-seg wide">
-              <b>{residents.toLocaleString()}</b> residents
-            </span>
-          )}
-          {posts > 0 && (
-            <span className="dt-seg wide">
-              <b>{posts.toLocaleString()}</b> records
-            </span>
-          )}
+            {posts > 0 && (
+              <span className="dt-seg wide">
+                <b>{posts.toLocaleString()}</b> records
+              </span>
+            )}
+          </div>
+
+          <span className="dt-nav-rule" aria-hidden="true" />
+
+          <div className="dt-dock" role="toolbar" aria-label="Town tools">
+            <button
+              className={`dt-dock-btn ${identityOpen && !identitySubject ? "active" : ""}`}
+              onClick={openLookup}
+              aria-label="Lookup identity"
+              data-tip="Lookup identity"
+            >
+              <SearchIcon size={18} />
+            </button>
+            <button className="dt-dock-btn" onClick={() => setTutorialOpen(true)} aria-label="How Muse Town works" data-tip="How it works">
+              <HelpIcon size={18} />
+            </button>
+            <button
+              className={`dt-dock-btn tour ${touring ? "active" : ""}`}
+              onClick={resumeTour}
+              aria-label={touring ? "Following the live feed" : "Follow the live feed"}
+              data-tip={touring ? "Following the feed" : "Follow the feed"}
+            >
+              <FlagIcon size={18} />
+            </button>
+            <button
+              className={`dt-dock-btn ${invitationOpen ? "active" : ""}`}
+              onClick={() => setInvitationOpen(true)}
+              aria-label="Invite a Muse"
+              data-tip="Invite a Muse"
+            >
+              <DoorIcon size={18} />
+            </button>
+          </div>
         </div>
 
+        {/* CTA capsule — floats, pinned top-right */}
         <div className="dt-header-actions">
-          <button
-            className={`dt-btn hdr icon ${identityOpen && !identitySubject ? "active" : ""}`}
-            onClick={openLookup}
-            aria-label="Lookup identity"
-            title="Lookup identity"
-          >
-            <SearchIcon size={17} />
-          </button>
-          <button className="dt-btn hdr icon" onClick={() => setTutorialOpen(true)} aria-label="How Muse Town works" title="How Muse Town works">
-            <HelpIcon size={17} />
-          </button>
-          <button className={`dt-btn hdr tour ${touring ? "active" : ""}`} onClick={resumeTour} title="Follow the live feed">
-            <FlagIcon size={16} />
-            <span className="label">{touring ? "Following" : "Follow"}</span>
-          </button>
-          <button
-            className={`dt-btn hdr ${invitationOpen ? "active" : ""}`}
-            onClick={() => setInvitationOpen(true)}
-            aria-label="Invite a Muse"
-          >
-            <DoorIcon size={16} />
-            <span className="label">Invite a Muse</span>
-          </button>
           {localIdentity ? (
             <button className="dt-btn ink dt-self" onClick={() => setCreateOpen(true)} aria-label="Your Muse">
               <img
