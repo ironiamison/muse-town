@@ -6,9 +6,11 @@ import {
 } from "lucide-react";
 import type { MuseIdentity } from "../../lib/musebook";
 import type { Execution } from "../../lib/execution";
-import { BRAND_ASSETS } from "../../config/brandAssets";
+import { MOTION_ASSETS } from "../../config/motionAssets";
 import { PHYSICAL_ASSETS } from "../../config/physicalAssets";
 import BoundaryHero from "../components/BoundaryHero";
+import MotionVideo from "../components/MotionVideo";
+import MuseFigure from "../components/MuseFigure";
 import { Link } from "../router";
 
 export default function StoryHomePage({
@@ -38,8 +40,11 @@ export default function StoryHomePage({
             <button type="button" onClick={onCreateTask}>Create a real task <ArrowRight /></button>
           </div>
           <figure className="seam-chapter__physical">
-            <img src={PHYSICAL_ASSETS.dealership.src} alt={PHYSICAL_ASSETS.dealership.alt} loading="lazy" />
-            <figcaption><MapPin /> Warsaw · 1.4 km</figcaption>
+            <MotionVideo asset={MOTION_ASSETS.dispatch} label="Documentary footage of a mechanic receiving a dispatch on a phone" />
+            <figcaption>
+              <span><MapPin /> Warsaw · 1.4 km</span>
+              <a href={MOTION_ASSETS.dispatch.source} target="_blank" rel="noreferrer">Film / {MOTION_ASSETS.dispatch.credit}</a>
+            </figcaption>
           </figure>
           <div className="seam-ticket">
             <span><small>Request</small><strong>Inspect before purchase</strong></span>
@@ -62,8 +67,11 @@ export default function StoryHomePage({
             </ol>
           </div>
           <figure className="seam-chapter__physical">
-            <img src={PHYSICAL_ASSETS.interior.src} alt={PHYSICAL_ASSETS.interior.alt} loading="lazy" />
-            <figcaption><span>Original capture</span><small>Executor / garage</small></figcaption>
+            <MotionVideo asset={MOTION_ASSETS.onsite} label="Documentary footage of a mechanic inspecting a vehicle" />
+            <figcaption>
+              <span>Original capture</span>
+              <a href={MOTION_ASSETS.onsite.source} target="_blank" rel="noreferrer">Film / {MOTION_ASSETS.onsite.credit}</a>
+            </figcaption>
           </figure>
           <div className="seam-ticket seam-ticket--evidence">
             {[PHYSICAL_ASSETS.heroVehicle, PHYSICAL_ASSETS.roadVehicle, PHYSICAL_ASSETS.dashboard].map((asset, index) => (
@@ -86,8 +94,11 @@ export default function StoryHomePage({
             </div>
           </div>
           <figure className="seam-chapter__physical">
-            <img src={PHYSICAL_ASSETS.emblem.src} alt={PHYSICAL_ASSETS.emblem.alt} loading="lazy" />
-            <figcaption><span>IMG_0184.JPG</span><small>Original media · Warsaw</small></figcaption>
+            <MotionVideo asset={MOTION_ASSETS.proof} label="Close documentary footage of a physical vehicle inspection" />
+            <figcaption>
+              <span>CAPTURE_0184.MOV</span>
+              <a href={MOTION_ASSETS.proof.source} target="_blank" rel="noreferrer">Film / {MOTION_ASSETS.proof.credit}</a>
+            </figcaption>
           </figure>
           <div className="seam-ticket seam-ticket--report">
             <span><small>Identity</small><strong>Verified</strong></span>
@@ -101,7 +112,7 @@ export default function StoryHomePage({
 
       <section className="seam-outro">
         <figure className="seam-outro__muse">
-          <img src={BRAND_ASSETS.muse.src} alt={BRAND_ASSETS.muse.alt} />
+          <MuseFigure size="large" label="Muse receiving verified proof" />
           <figcaption>
             <small>Muse / digital</small>
             <strong>{identity?.name ?? "Ready for the next request"}</strong>

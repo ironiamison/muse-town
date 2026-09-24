@@ -1,8 +1,10 @@
 import { ArrowRight, Check, MapPin, RotateCcw, ShieldCheck } from "lucide-react";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import { BRAND_ASSETS } from "../../config/brandAssets";
+import { MOTION_ASSETS } from "../../config/motionAssets";
 import { PHYSICAL_ASSETS } from "../../config/physicalAssets";
 import type { MuseIdentity } from "../../lib/musebook";
+import MotionVideo from "./MotionVideo";
+import MuseFigure from "./MuseFigure";
 
 type Phase = "ready" | "crossing" | "matched" | "onsite" | "proof" | "complete";
 
@@ -21,7 +23,6 @@ const REQUESTS = [
     short: "Inspect this Porsche before I buy it.",
     title: "Inspect this Porsche before I buy it.",
     result: "Passenger-side door shows evidence of repainting not disclosed in the listing.",
-    asset: PHYSICAL_ASSETS.dealership,
     evidence: [PHYSICAL_ASSETS.heroVehicle, PHYSICAL_ASSETS.roadVehicle, PHYSICAL_ASSETS.interior, PHYSICAL_ASSETS.dashboard],
     report: [
       ["Exterior", "Good"],
@@ -30,51 +31,6 @@ const REQUESTS = [
       ["VIN", "Match"],
       ["Cold start", "Verified"],
       ["Undisclosed issue", "Passenger-side door"],
-    ],
-  },
-  {
-    short: "Walk through this apartment.",
-    title: "Walk through this apartment before I sign.",
-    result: "Moisture damage is visible below the north-facing bedroom window.",
-    asset: PHYSICAL_ASSETS.apartmentInspection,
-    evidence: Array(4).fill(PHYSICAL_ASSETS.apartmentInspection),
-    report: [
-      ["Windows", "Operational"],
-      ["Utilities", "Active"],
-      ["Measurements", "62.4 m²"],
-      ["Address", "Match"],
-      ["Moisture", "Detected"],
-      ["Undisclosed issue", "Bedroom window"],
-    ],
-  },
-  {
-    short: "Check if this item is in stock.",
-    title: "Check whether this item is physically in stock.",
-    result: "Two units are available on shelf B-14; the listed color is not present.",
-    asset: PHYSICAL_ASSETS.storeInventory,
-    evidence: Array(4).fill(PHYSICAL_ASSETS.storeInventory),
-    report: [
-      ["Item", "Located"],
-      ["Quantity", "2 units"],
-      ["Shelf", "B-14"],
-      ["Barcode", "Match"],
-      ["Listed color", "Unavailable"],
-      ["Media", "Original"],
-    ],
-  },
-  {
-    short: "Pick this up and deliver it.",
-    title: "Pick this up and deliver it before 18:00.",
-    result: "Item collected intact and delivered to the verified destination at 17:42.",
-    asset: PHYSICAL_ASSETS.packageDelivery,
-    evidence: Array(4).fill(PHYSICAL_ASSETS.packageDelivery),
-    report: [
-      ["Pickup", "Verified"],
-      ["Package", "Intact"],
-      ["Recipient", "Matched"],
-      ["Destination", "Verified"],
-      ["Delivered", "17:42"],
-      ["Proof", "Original media"],
     ],
   },
 ] as const;
@@ -141,16 +97,21 @@ export default function BoundaryHero({
                 <span>{item.short}</span>
               </button>
             ))}
+            <small>One execution, shown end to end. More primitives live under Capabilities.</small>
           </div>
         </div>
       </div>
 
       <div className="boundary-hero__physical">
-        <img className="boundary-hero__reality-base" src={request.asset.src} alt={request.asset.alt} />
-        <img className="boundary-hero__reality-reveal" src={request.asset.src} alt="" aria-hidden="true" />
+        <MotionVideo
+          className="boundary-hero__reality-film"
+          asset={MOTION_ASSETS.executionFilm}
+          label="Documentary footage of a mechanic carrying out a physical inspection"
+          eager
+        />
         <div className="boundary-hero__photo-shade" />
-        <a href={request.asset.source} target="_blank" rel="noreferrer">
-          Temporary photo · {request.asset.credit}
+        <a href={MOTION_ASSETS.executionFilm.source} target="_blank" rel="noreferrer">
+          Documentary footage · {MOTION_ASSETS.executionFilm.credit}
         </a>
       </div>
 
@@ -166,10 +127,7 @@ export default function BoundaryHero({
 
       <div className="boundary-hero__muse">
         <span>
-          <img
-            src={identity?.avatarUrl ?? BRAND_ASSETS.muse.src}
-            alt={identity?.avatarUrl ? "" : BRAND_ASSETS.muse.alt}
-          />
+          {identity?.avatarUrl ? <img src={identity.avatarUrl} alt="" /> : <MuseFigure label="Muse ready to dispatch" />}
         </span>
         <small>{identity?.name ?? "Muse"}</small>
       </div>

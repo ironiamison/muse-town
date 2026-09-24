@@ -6386,6 +6386,25 @@ summary:focus-visible {
   transition: filter 900ms ease, transform 1.4s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+.boundary-hero__physical > .boundary-hero__reality-film {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 38%;
+  filter: saturate(0.18) contrast(1.1) brightness(0.5);
+  transform: scale(1.035);
+  transition: filter 900ms ease, transform 1.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.boundary-hero.is-crossing .boundary-hero__reality-film,
+.boundary-hero.is-matched .boundary-hero__reality-film,
+.boundary-hero.is-onsite .boundary-hero__reality-film,
+.boundary-hero.is-proof .boundary-hero__reality-film,
+.boundary-hero.is-complete .boundary-hero__reality-film {
+  filter: saturate(0.82) contrast(1.05) brightness(0.78);
+  transform: scale(1);
+}
+
 .boundary-hero__physical > .boundary-hero__reality-reveal {
   position: absolute;
   inset: 0;
@@ -6510,6 +6529,13 @@ summary:focus-visible {
   width: 11px;
 }
 
+.boundary-hero__requests > small {
+  max-width: 260px;
+  margin: 8px 0 0 11px;
+  color: #9a978e;
+  font: 6px/1.45 var(--en-mono);
+}
+
 .boundary-hero__world-labels {
   position: absolute;
   z-index: 15;
@@ -6614,8 +6640,7 @@ summary:focus-visible {
   overflow: hidden;
   border: 3px solid rgba(255, 255, 255, 0.92);
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 60% 40%, #333 0 35%, #080808 36% 100%);
+  background: #e9e3d8;
   box-shadow: 0 6px 20px rgba(20, 20, 18, 0.16);
 }
 
@@ -6624,6 +6649,115 @@ summary:focus-visible {
   height: 100%;
   object-fit: cover;
 }
+
+.muse-figure {
+  --muse-ink: #181816;
+  --muse-shell: #d8d2c7;
+  --muse-face: #eadac7;
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  isolation: isolate;
+}
+
+.muse-figure > svg {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.muse-figure--small > svg {
+  transform: scale(1.58) translateY(10%);
+  transform-origin: center 25%;
+}
+
+.muse-figure__character {
+  transform-origin: center bottom;
+  animation: muse-breathe 5.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.muse-figure__shell {
+  fill: var(--muse-shell);
+  stroke: rgba(23, 23, 21, 0.22);
+  stroke-width: 1.5px;
+}
+
+.muse-figure__arm {
+  fill: none;
+  stroke: rgba(23, 23, 21, 0.14);
+  stroke-linecap: round;
+  stroke-width: 2px;
+}
+
+.muse-figure__face {
+  fill: var(--muse-face);
+  stroke: rgba(23, 23, 21, 0.13);
+  stroke-width: 1.5px;
+}
+
+.muse-figure__eyes {
+  fill: var(--muse-ink);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: muse-blink 5.6s linear infinite;
+}
+
+.muse-figure__mouth {
+  fill: none;
+  stroke: var(--muse-ink);
+  stroke-linecap: round;
+  stroke-width: 2px;
+}
+
+.muse-figure__orbit {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: -42%;
+  left: -42%;
+  height: 1px;
+  background: rgba(23, 23, 21, 0.2);
+}
+
+.muse-figure__orbit i {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--en-signal);
+  opacity: 0;
+  animation: muse-result-return 5.6s cubic-bezier(0.62, 0, 0.28, 1) infinite;
+}
+
+.muse-figure__orbit i:nth-child(2) {
+  animation-delay: 180ms;
+}
+
+.muse-figure--large {
+  width: min(62%, 410px);
+  height: min(62vw, 480px);
+  min-height: 300px;
+}
+
+.muse-figure--large::before,
+.muse-figure--large::after {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  width: 52vw;
+  height: 1px;
+  background: #bcb8ad;
+  content: "";
+}
+
+.muse-figure--large::before { right: 100%; }
+.muse-figure--large::after { left: 100%; }
 
 .boundary-hero__muse small {
   font: 700 7px/1 var(--en-ui);
@@ -7270,13 +7404,35 @@ summary:focus-visible {
 .seam-chapter__physical::after {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background:
     linear-gradient(90deg, rgba(10, 10, 9, 0.22), transparent 35%),
     linear-gradient(0deg, rgba(8, 8, 7, 0.56), transparent 45%);
+  pointer-events: none;
   content: "";
 }
 
-.seam-chapter__physical > img {
+.seam-chapter--onsite .seam-chapter__physical::before,
+.seam-chapter--proof .seam-chapter__physical::before {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: rgba(255, 104, 70, 0.76);
+  box-shadow: 0 0 0 1px rgba(255, 104, 70, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  content: "";
+  animation: seam-capture-scan 6.4s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+.seam-chapter--proof .seam-chapter__physical::before {
+  animation-delay: 1.8s;
+}
+
+.seam-chapter__physical > img,
+.seam-chapter__physical > video {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -7284,11 +7440,17 @@ summary:focus-visible {
   transform: scale(1.01);
 }
 
-.seam-chapter--onsite .seam-chapter__physical > img {
+.seam-chapter--dispatch .seam-chapter__physical > video {
+  object-position: 50% center;
+}
+
+.seam-chapter--onsite .seam-chapter__physical > img,
+.seam-chapter--onsite .seam-chapter__physical > video {
   object-position: 58% center;
 }
 
-.seam-chapter--proof .seam-chapter__physical > img {
+.seam-chapter--proof .seam-chapter__physical > img,
+.seam-chapter--proof .seam-chapter__physical > video {
   object-position: 62% center;
 }
 
@@ -7299,11 +7461,29 @@ summary:focus-visible {
   right: 35px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 7px;
   color: rgba(255, 255, 255, 0.72);
   font: 7px/1 var(--en-mono);
   letter-spacing: 0.07em;
   text-transform: uppercase;
+}
+
+.seam-chapter__physical > figcaption > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.seam-chapter__physical > figcaption a {
+  color: rgba(255, 255, 255, 0.48);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.seam-chapter__physical > figcaption a:hover,
+.seam-chapter__physical > figcaption a:focus-visible {
+  color: #fff;
 }
 
 .seam-chapter__physical > figcaption svg {
@@ -7505,11 +7685,8 @@ summary:focus-visible {
   background: var(--en-bone);
 }
 
-.seam-outro__muse > img {
-  width: min(72%, 560px);
-  height: min(72%, 560px);
-  object-fit: contain;
-  mix-blend-mode: multiply;
+.seam-outro__muse > .muse-figure {
+  transform: translateY(-3%);
 }
 
 .seam-outro__muse figcaption {
@@ -7613,7 +7790,8 @@ summary:focus-visible {
 }
 
 @supports (animation-timeline: view()) {
-  .seam-chapter__physical > img {
+  .seam-chapter__physical > img,
+  .seam-chapter__physical > video {
     animation: seam-image-settle both linear;
     animation-timeline: view();
     animation-range: entry 0% cover 60%;
@@ -7629,6 +7807,40 @@ summary:focus-visible {
 @keyframes seam-image-settle {
   from { filter: saturate(0.15) contrast(1.12) brightness(0.62); transform: scale(1.06); }
   to { filter: saturate(0.82) contrast(1.05) brightness(0.9); transform: scale(1); }
+}
+
+@keyframes seam-capture-scan {
+  0%,
+  18% { top: 8%; opacity: 0; }
+  26% { opacity: 0.82; }
+  66% { top: 90%; opacity: 0.58; }
+  74%,
+  100% { top: 90%; opacity: 0; }
+}
+
+@keyframes muse-result-return {
+  0%,
+  58% { right: 0; opacity: 0; transform: scaleX(1); }
+  65% { opacity: 1; }
+  84% { right: calc(50% - 2px); opacity: 1; transform: scaleX(1); }
+  88% { right: calc(50% - 2px); opacity: 0.85; transform: scaleX(2.4); }
+  94%,
+  100% { right: calc(50% - 2px); opacity: 0; transform: scaleX(1); }
+}
+
+@keyframes muse-breathe {
+  0%,
+  56%,
+  100% { transform: scaleY(1); }
+  76% { transform: scaleY(1.018); }
+}
+
+@keyframes muse-blink {
+  0%,
+  84%,
+  88%,
+  100% { transform: scaleY(1); }
+  86% { transform: scaleY(0.08); }
 }
 
 @keyframes seam-ticket-return {
@@ -11893,9 +12105,9 @@ summary:focus-visible {
     min-height: 610px;
   }
 
-  .seam-outro__muse > img {
-    width: min(82%, 430px);
-    height: min(82%, 430px);
+  .seam-outro__muse > .muse-figure {
+    width: min(62%, 290px);
+    height: 360px;
   }
 
   .seam-outro__muse figcaption {
