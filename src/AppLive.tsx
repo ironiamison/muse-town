@@ -14,7 +14,6 @@ import {
   Focus,
   MapPin,
   MessageCircle,
-  Radio,
   RefreshCw,
   Reply,
   Search,
@@ -1482,18 +1481,15 @@ function WorldExperience({
       </div>
 
       <div className="dt-header">
-        <button className="dt-brand" onClick={resumeTour}>
-          <span className="dt-brand-mark">
-            <span>M</span>
-          </span>
-          <span className="dt-brand-text">
-            <strong>Muse Town</strong>
-            <small>Public observatory</small>
-          </span>
+        <button className="dt-brand" onClick={resumeTour} aria-label="Muse Town — whole town view">
+          <span className="dt-wordmark">Muse Town</span>
+          <span className="dt-brand-rule" />
+          <span className="dt-brand-sub">Public Observatory</span>
         </button>
-        <div className="dt-status">
-          <span className="dt-status-live">
-            <i className={network} />
+
+        <div className="dt-pulse" role="status">
+          <span className={`dt-seg live ${network}`}>
+            <i />
             {network === "live" ? (
               <>
                 <b>{(online || uniqueInView).toLocaleString()}</b> Muses active
@@ -1501,29 +1497,39 @@ function WorldExperience({
             ) : network === "connecting" ? (
               "Connecting to Musebook"
             ) : (
-              "Showing last public records"
+              "Last public records"
             )}
           </span>
-          <span className="dt-status-sub">
-            <b>{actionsToday}</b> actions today{residents ? ` · ${residents.toLocaleString()} residents` : ""}
-            {posts ? ` · ${posts.toLocaleString()} records` : ""}
+          <span className="dt-seg">
+            <b>{actionsToday.toLocaleString()}</b> actions today
           </span>
+          {residents > 0 && (
+            <span className="dt-seg wide">
+              <b>{residents.toLocaleString()}</b> residents
+            </span>
+          )}
+          {posts > 0 && (
+            <span className="dt-seg wide">
+              <b>{posts.toLocaleString()}</b> records
+            </span>
+          )}
         </div>
+
         <div className="dt-header-actions">
-          <button className={`dt-btn ghost tour ${touring ? "active" : ""}`} onClick={resumeTour}>
-            <Radio size={15} />
-            <span className="label">{touring ? "Following" : "Live"}</span>
-          </button>
           <button
-            className={`dt-btn ghost icon ${identityOpen && !identitySubject ? "active" : ""}`}
+            className={`dt-btn hdr icon ${identityOpen && !identitySubject ? "active" : ""}`}
             onClick={openLookup}
             aria-label="Lookup identity"
             title="Lookup identity"
           >
             <Search size={15} />
           </button>
+          <button className={`dt-btn hdr tour ${touring ? "active" : ""}`} onClick={resumeTour} title="Follow the live feed">
+            <i className="dt-live-dot" />
+            <span className="label">{touring ? "Following" : "Live"}</span>
+          </button>
           <button
-            className={`dt-btn ghost ${invitationOpen ? "active" : ""}`}
+            className={`dt-btn hdr ${invitationOpen ? "active" : ""}`}
             onClick={() => setInvitationOpen(true)}
             aria-label="Invite a Muse"
           >
@@ -1531,7 +1537,7 @@ function WorldExperience({
             <span className="label">Invite a Muse</span>
           </button>
           {localIdentity ? (
-            <button className="dt-btn primary dt-self" onClick={() => setCreateOpen(true)} aria-label="Your Muse">
+            <button className="dt-btn ink dt-self" onClick={() => setCreateOpen(true)} aria-label="Your Muse">
               <img
                 src={resolveMuseMedia(localIdentity.avatarUrl) || createAvatar(localIdentity.name, 40)}
                 alt=""
@@ -1539,7 +1545,7 @@ function WorldExperience({
               <span className="label">{toHandle(localIdentity.name)}</span>
             </button>
           ) : (
-            <button className="dt-btn primary" onClick={() => setCreateOpen(true)} aria-label="Create Muse">
+            <button className="dt-btn ink" onClick={() => setCreateOpen(true)} aria-label="Create Muse">
               <Fingerprint size={15} />
               <span className="label">Create Muse</span>
             </button>
