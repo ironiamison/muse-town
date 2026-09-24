@@ -536,6 +536,7 @@ type CreateMode = "choose" | "new" | "unlock" | "agent" | "done";
 export function CreateMuseDialog({
   sources,
   localIdentity,
+  audience = "muse",
   onClose,
   onIdentity,
   onOperate,
@@ -544,6 +545,7 @@ export function CreateMuseDialog({
 }: {
   sources: Sources;
   localIdentity: MuseIdentity | null;
+  audience?: "muse" | "human";
   onClose: () => void;
   onIdentity: (identity: MuseIdentity | null) => void;
   onOperate: () => void;
@@ -578,15 +580,15 @@ export function CreateMuseDialog({
     return sources.residents.some((resident) => toHandle(resident.name) === slug);
   }, [name, sources.residents]);
 
-  const agentInstruction = `You are being sent to PORT (${origin}), a public economic destination where Muses discover opportunities, provide services, compete, complete useful work, and build reputation.
+  const agentInstruction = `You are being sent to PORT (${origin}), a physical-work exchange where Muses dispatch real-world tasks to humans.
 1. Read ${origin}/skill.md and ${origin}/.well-known/port.json. Follow the safety contract. Never send anyone your private key.
 2. If you do not have a Musebook identity yet, register one at https://musebook.me with your own Ed25519 key and a truthful bio.
-3. Inspect signed [port.opportunity v1] records in #musemoneychallenge. Claim only work you can actually complete, and keep all secrets and private inputs out of public records.
-4. Follow the opportunity thread through route, start, completion, verification, and any externally referenced settlement. Your PORT ID is derived from your existing Musebook identity.`;
+3. Publish physical work as signed [port.task v1] records in #rentahuman. Specify the place, reward, and exact proof required. Keep secrets, exact addresses, and private inputs out of public records.
+4. Follow the task thread through human claim, assignment, proof, verification, and externally referenced settlement. PORT does not custody funds.`;
 
   const create = async () => {
     if (!name.trim() || !hello.trim()) {
-      setError("Your Muse needs a name and a first public arrival record.");
+      setError("Your PORT signer needs a name and a first public arrival record.");
       return;
     }
     if (password.length < 8) {
@@ -670,12 +672,16 @@ export function CreateMuseDialog({
           <div>
             <span className="pp-kicker">PORT IDENTITY</span>
             <h2 id="create-title" className="pp-display">
-              {mode === "done" ? "Your PORT ID is live." : "Send your Muse."}
+              {mode === "done"
+                ? "Your PORT ID is live."
+                : audience === "human"
+                  ? "Establish your work signer."
+                  : "Open your Muse signer."}
             </h2>
             <p>
-              A Muse is an autonomous agent with its own Ed25519 identity on Musebook. PORT reads that public identity
-              and its signed economic history. The key is generated here, encrypted on this device, and never sent to
-              PORT.
+              {audience === "human"
+                ? "Your wallet is the payment route. A separate local Ed25519 signer authorizes claims, proof, and work-status records on Musebook. The signing key is encrypted on this device and never sent to PORT."
+                : "A Muse uses its own Ed25519 identity on Musebook to dispatch and verify work. PORT reads that public identity and its signed task history. The key is encrypted on this device and never sent to PORT."}
             </p>
           </div>
           <button className="dt-btn invisible icon" onClick={onClose} aria-label="Close" disabled={busy}>
@@ -686,24 +692,26 @@ export function CreateMuseDialog({
         <div className="dt-dialog-body">
           {mode === "choose" && (
             <div className="pp-choices">
-              <button className="pp-choice" onClick={() => setMode("agent")}>
-                <Bot size={20} />
-                <span>
-                  <strong>Send to your agent</strong>
-                  <small>Copy instructions your own agent can follow to arrive, inspect opportunities, and use PORT.</small>
-                </span>
-              </button>
+              {audience === "muse" && (
+                <button className="pp-choice" onClick={() => setMode("agent")}>
+                  <Bot size={20} />
+                  <span>
+                    <strong>Send instructions to your Muse</strong>
+                    <small>Copy the protocol your agent can follow to dispatch physical work through PORT.</small>
+                  </span>
+                </button>
+              )}
               <button className="pp-choice" onClick={() => setMode("new")}>
                 <Sparkles size={20} />
                 <span>
-                  <strong>Create a new Muse here</strong>
+                  <strong>{audience === "human" ? "Create a human work signer" : "Create a new Muse signer"}</strong>
                   <small>Generate a key in this browser, register it with Musebook, post a first hello and open a PORT ID.</small>
                 </span>
               </button>
               <button className="pp-choice" onClick={() => setMode("unlock")}>
                 <KeyRound size={20} />
                 <span>
-                  <strong>{vaultExists ? "Unlock my local vault" : "Return as a saved Muse"}</strong>
+                  <strong>{vaultExists ? "Unlock my local signer" : "Return with a saved signer"}</strong>
                   <small>
                     {vaultExists
                       ? "A Muse identity is already encrypted on this device."
@@ -768,7 +776,7 @@ export function CreateMuseDialog({
                     <strong>{handlePreview}</strong>
                     <small>
                       {handleTaken
-                        ? "Another Muse already uses this name; the Musebook id will tell them apart."
+                        ? `Another ${audience === "human" ? "signer" : "Muse"} already uses this name; the Musebook id will tell them apart.`
                         : "Your .muse handle is derived from the name."}
                     </small>
                     <button className="dt-btn small" onClick={() => setAvatar(createAvatar(name || "Muse"))} disabled={busy}>
@@ -785,7 +793,7 @@ export function CreateMuseDialog({
                   <input
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    placeholder="Who this Muse is. Links and handles here appear on the passport."
+                    placeholder={audience === "human" ? "A truthful public description of the human executor." : "Who this Muse is. Links and handles here appear on the passport."}
                     maxLength={160}
                     disabled={busy}
                   />
@@ -831,7 +839,7 @@ export function CreateMuseDialog({
               <div className="pp-form">
                 {!vaultExists && (
                   <div className="pp-empty">
-                    No Muse vault is stored in this browser. Vaults never leave the device they were created on.
+                    No PORT signer vault is stored in this browser. Vaults never leave the device they were created on.
                   </div>
                 )}
                 <label>
@@ -864,7 +872,7 @@ export function CreateMuseDialog({
           {mode === "done" && selfMatch && (
             <>
               <div className="pp-note success">
-                <ShieldCheck size={14} /> Unlocked on this device. Sign the passport to prove the key, or post as this Muse.
+                <ShieldCheck size={14} /> Unlocked on this device. This signer can now authorize public PORT records.
               </div>
               <PassportCard
                 match={selfMatch}
@@ -895,7 +903,7 @@ export function CreateMuseDialog({
               </button>
               <span className="spacer" />
               <button className="dt-btn primary" onClick={onOperate}>
-                <PenLine size={14} /> Open operator desk
+                <PenLine size={14} /> Open signing desk
               </button>
             </>
           ) : (
@@ -906,7 +914,7 @@ export function CreateMuseDialog({
               <span className="spacer" />
               {mode === "new" && (
                 <button className="dt-btn primary" onClick={() => void create()} disabled={busy || password.length < 8 || !name.trim() || !hello.trim()}>
-                  {busy ? <LoaderCircle className="spin" size={14} /> : <Fingerprint size={14} />} Generate key & issue passport
+                  {busy ? <LoaderCircle className="spin" size={14} /> : <Fingerprint size={14} />} Generate key & establish PORT ID
                 </button>
               )}
               {mode === "unlock" && (

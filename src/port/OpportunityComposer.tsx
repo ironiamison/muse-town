@@ -55,29 +55,36 @@ export default function OpportunityComposer({
   };
 
   return (
-    <section className="manifest" aria-label="File a PORT opportunity">
-      <header className="manifest-head">
+    <section className="opportunity-intake" aria-label="File a PORT opportunity">
+      <header className="intake-head">
         <div>
-          <span>BOARD INTAKE / OPPORTUNITY</span>
-          <h1>File work for a Muse.</h1>
+          <span>THE BOARD / INTAKE DESK</span>
+          <h1>Open a route.</h1>
           <p>
-            This becomes one signed public record in <b>#{PORT_CHANNELS.board}</b>. Claims, routing, completion,
-            verification and settlement remain attached to its thread.
+            Define one useful outcome. PORT turns it into a work order, routes a qualified Muse, and keeps every later
+            state attached to one public thread.
           </p>
         </div>
+        <dl>
+          <div>
+            <dt>OBJECT</dt>
+            <dd>OPPORTUNITY FILE</dd>
+          </div>
+          <div>
+            <dt>STATE</dt>
+            <dd>UNSIGNED DRAFT</dd>
+          </div>
+          <div>
+            <dt>DESTINATION</dt>
+            <dd>{draft.terminal}</dd>
+          </div>
+        </dl>
         <button className="port-close" onClick={onClose} aria-label="Close">
           ×
         </button>
       </header>
 
-      <div className="manifest-index" aria-hidden="true">
-        <span>INTENT</span>
-        <span>VALUE</span>
-        <span>ROUTE</span>
-        <span>OUTPUT</span>
-      </div>
-
-      <form
+      <form className="intake-body"
         onSubmit={(event) => {
           event.preventDefault();
           if (!ready) return;
@@ -85,142 +92,225 @@ export default function OpportunityComposer({
           else onPublish(record);
         }}
       >
-        <fieldset>
-          <legend>01 / INTENT</legend>
-          <label className="wide">
-            OPPORTUNITY
-            <input
-              value={draft.title}
-              onChange={(event) => set("title", event.target.value)}
-              placeholder="What useful work needs to be done?"
-              maxLength={96}
-            />
-          </label>
-          <label className="wide">
-            BRIEF
-            <textarea
-              value={draft.brief}
-              onChange={(event) => set("brief", event.target.value)}
-              placeholder="Define the job, constraints, inputs and what success means."
-              rows={4}
-              maxLength={600}
-            />
-          </label>
-          <div className="manifest-choice wide">
-            <span>CATEGORY</span>
+        <div className="intake-fields">
+          <section className="intake-section intent">
+            <header>
+              <i>01</i>
+              <span>
+                <b>INTENT</b>
+                <em>The useful result—not the method.</em>
+              </span>
+            </header>
             <div>
-              {OPPORTUNITY_CATEGORIES.map((category) => (
-                <button
-                  type="button"
-                  key={category}
-                  className={draft.category === category ? "on" : ""}
-                  onClick={() => set("category", category as OpportunityCategory)}
-                >
-                  {category}
-                </button>
-              ))}
+              <label className="intake-title">
+                WORK ORDER TITLE
+                <input
+                  value={draft.title}
+                  onChange={(event) => set("title", event.target.value)}
+                  placeholder="What needs to exist when this route is complete?"
+                  maxLength={96}
+                />
+              </label>
+              <label>
+                OPERATING BRIEF
+                <textarea
+                  value={draft.brief}
+                  onChange={(event) => set("brief", event.target.value)}
+                  placeholder="Inputs, constraints, context, and the condition for success."
+                  rows={4}
+                  maxLength={600}
+                />
+              </label>
             </div>
-          </div>
-        </fieldset>
+          </section>
 
-        <fieldset>
-          <legend>02 / VALUE + ACCESS</legend>
-          <label>
-            REWARD
-            <input
-              value={draft.reward}
-              onChange={(event) => set("reward", event.target.value)}
-              inputMode="decimal"
-              placeholder="Optional"
-            />
-          </label>
-          <label>
-            ASSET
-            <input
-              value={draft.asset}
-              onChange={(event) => set("asset", event.target.value.toUpperCase())}
-              placeholder="META / USDC / OTHER"
-              maxLength={16}
-            />
-          </label>
-          <div className="manifest-choice wide">
-            <span>MINIMUM CLEARANCE</span>
+          <section className="intake-section route">
+            <header>
+              <i>02</i>
+              <span>
+                <b>ROUTE</b>
+                <em>Classify the work and choose where it executes.</em>
+              </span>
+            </header>
             <div>
-              {(["C0", "C1", "C2", "C3", "C4"] as PortClearance[]).map((level) => (
-                <button
-                  type="button"
-                  key={level}
-                  className={draft.clearance === level ? "on" : ""}
-                  onClick={() => set("clearance", level)}
-                >
-                  {level}
-                </button>
-              ))}
+              <div className="intake-choice category-choice">
+                <span>CATEGORY</span>
+                <div>
+                  {OPPORTUNITY_CATEGORIES.map((category) => (
+                    <button
+                      type="button"
+                      key={category}
+                      className={draft.category === category ? "on" : ""}
+                      onClick={() => set("category", category as OpportunityCategory)}
+                    >
+                      {category.replace("_", " ")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="intake-choice destination-choice">
+                <span>EXECUTION TERMINAL</span>
+                <div>
+                  {DESTINATIONS.map((destination) => (
+                    <button
+                      type="button"
+                      key={destination}
+                      className={draft.terminal === destination ? "on" : ""}
+                      onClick={() => set("terminal", destination)}
+                    >
+                      <i>{destination.slice(0, 1)}</i>
+                      {destination}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </fieldset>
+          </section>
 
-        <fieldset>
-          <legend>03 / ROUTE</legend>
-          <div className="manifest-choice wide">
-            <span>DESTINATION</span>
+          <section className="intake-section terms">
+            <header>
+              <i>03</i>
+              <span>
+                <b>VALUE + ACCESS</b>
+                <em>Declare terms without implying custody.</em>
+              </span>
+            </header>
             <div>
-              {DESTINATIONS.map((destination) => (
-                <button
-                  type="button"
-                  key={destination}
-                  className={draft.terminal === destination ? "on" : ""}
-                  onClick={() => set("terminal", destination)}
-                >
-                  {destination}
-                </button>
-              ))}
+              <div className="intake-pair">
+                <label>
+                  REWARD / OPTIONAL
+                  <input
+                    value={draft.reward}
+                    onChange={(event) => set("reward", event.target.value)}
+                    inputMode="decimal"
+                    placeholder="0.00"
+                  />
+                </label>
+                <label>
+                  ASSET
+                  <input
+                    value={draft.asset}
+                    onChange={(event) => set("asset", event.target.value.toUpperCase())}
+                    placeholder="META / USDC / OTHER"
+                    maxLength={16}
+                  />
+                </label>
+                <label>
+                  DEADLINE / UTC
+                  <input
+                    value={draft.deadline}
+                    onChange={(event) => set("deadline", event.target.value)}
+                    placeholder="Optional · 2026-10-02T18:00Z"
+                  />
+                </label>
+              </div>
+              <div className="intake-choice clearance-choice">
+                <span>MINIMUM CLEARANCE</span>
+                <div>
+                  {(["C0", "C1", "C2", "C3", "C4"] as PortClearance[]).map((level) => (
+                    <button
+                      type="button"
+                      key={level}
+                      className={draft.clearance === level ? "on" : ""}
+                      onClick={() => set("clearance", level)}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-          <label className="wide">
-            DEADLINE / UTC
-            <input
-              value={draft.deadline}
-              onChange={(event) => set("deadline", event.target.value)}
-              placeholder="Optional · 2026-10-02T18:00Z"
-            />
-          </label>
-        </fieldset>
+          </section>
 
-        <fieldset>
-          <legend>04 / COMPLETION</legend>
-          <label className="wide">
-            REQUIRED OUTPUT
-            <textarea
-              value={draft.deliverable}
-              onChange={(event) => set("deliverable", event.target.value)}
-              placeholder="The exact artifact or evidence the assigned Muse must return."
-              rows={3}
-              maxLength={300}
-            />
-          </label>
-        </fieldset>
+          <section className="intake-section output">
+            <header>
+              <i>04</i>
+              <span>
+                <b>COMPLETION OBJECT</b>
+                <em>The exact artifact that closes the route.</em>
+              </span>
+            </header>
+            <div>
+              <label>
+                REQUIRED OUTPUT
+                <textarea
+                  value={draft.deliverable}
+                  onChange={(event) => set("deliverable", event.target.value)}
+                  placeholder="Specify the artifact, evidence, format, and acceptance criteria."
+                  rows={4}
+                  maxLength={300}
+                />
+              </label>
+            </div>
+          </section>
 
-        {!screen.ok && <p className="manifest-blocked">{screen.reason}</p>}
-
-        <section className="record-proof">
-          <header>
-            <span>PUBLIC RECORD PREVIEW</span>
-            <button type="button" onClick={copy}>
-              {copied ? "COPIED" : "COPY FOR YOUR MUSE"}
-            </button>
-          </header>
-          <pre>{record}</pre>
-        </section>
-
-        <div className="manifest-submit">
-          <p>
-            PORT does not hold the reward. Any later settlement is a creator-signed record with an external reference.
-          </p>
-          <button className="port-action primary" type="submit" disabled={!ready}>
-            {identity ? "SIGN + FILE TO THE BOARD" : "ESTABLISH PORT ID"}
-          </button>
+          {!screen.ok && <p className="intake-blocked">{screen.reason}</p>}
         </div>
+
+        <aside className="opportunity-file">
+          <header>
+            <span>PORT / OPPORTUNITY FILE</span>
+            <b>UNSIGNED</b>
+          </header>
+          <div className="file-identity">
+            <i>{draft.clearance}</i>
+            <span>
+              <small>PENDING REFERENCE</small>
+              <strong>{draft.title.trim() || "UNTITLED ROUTE"}</strong>
+              <em>{draft.category.replace("_", " ")}</em>
+            </span>
+          </div>
+          <dl>
+            <div>
+              <dt>VALUE</dt>
+              <dd>{draft.reward.trim() ? `${draft.reward} ${draft.asset}`.trim() : "UNDECLARED"}</dd>
+            </div>
+            <div>
+              <dt>TERMINAL</dt>
+              <dd>{draft.terminal}</dd>
+            </div>
+            <div>
+              <dt>DEADLINE</dt>
+              <dd>{draft.deadline.trim() || "OPEN"}</dd>
+            </div>
+            <div>
+              <dt>CHANNEL</dt>
+              <dd>#{PORT_CHANNELS.board}</dd>
+            </div>
+          </dl>
+          <section>
+            <span>OPERATING BRIEF</span>
+            <p>{draft.brief.trim() || "Awaiting a precise operating brief."}</p>
+          </section>
+          <section>
+            <span>COMPLETION OBJECT</span>
+            <p>{draft.deliverable.trim() || "Awaiting a required output."}</p>
+          </section>
+          <div className="file-route" aria-label="Opportunity route">
+            {["OPEN", "CLAIM", "ROUTE", "WORK", "VERIFY"].map((station, index) => (
+              <span key={station} className={index === 0 ? "current" : ""}>
+                <i />
+                {station}
+              </span>
+            ))}
+          </div>
+          <details>
+            <summary>OUTBOUND RECORD</summary>
+            <pre>{record}</pre>
+            <button type="button" onClick={copy}>
+              {copied ? "COPIED" : "COPY RECORD"}
+            </button>
+          </details>
+          <footer>
+            <button className="port-action primary" type="submit" disabled={!ready}>
+              {identity ? "REVIEW + OPEN ROUTE" : "ESTABLISH PORT ID"}
+            </button>
+          </footer>
+          <p>
+            PORT does not hold a declared reward. Settlement requires a later creator-signed record with an external
+            reference.
+          </p>
+        </aside>
       </form>
     </section>
   );

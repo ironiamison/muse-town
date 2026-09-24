@@ -19,6 +19,7 @@ export const PORT_VERSION = "v1";
 
 export type RecordKind =
   | "task"
+  | "wallet"
   | "accept"
   | "assign"
   | "departed"
@@ -32,6 +33,7 @@ export type RecordKind =
 
 export const RECORD_MARKERS: Record<RecordKind, string> = {
   task: "[port.task v1]",
+  wallet: "[port.wallet v1]",
   accept: "[port.accept v1]",
   assign: "[port.assign v1]",
   departed: "[port.departed v1]",
@@ -194,7 +196,7 @@ export type PortActor = {
 };
 
 export type LifecycleEvent = {
-  kind: Exclude<RecordKind, "task" | "human">;
+  kind: Exclude<RecordKind, "task" | "human" | "wallet">;
   post: MusePost;
   actor: PortActor;
   at: number;
@@ -229,7 +231,14 @@ export type PortTask = {
   departedAt: number | null;
   proof: { items: ProofItem[]; post: MusePost } | null;
   verification: { result: "accepted" | "rejected" | "reviewing"; note: string; post: MusePost } | null;
-  settlement: { amount: number | null; asset: string; rail: string; tx: string; post: MusePost } | null;
+  settlement: {
+    amount: number | null;
+    asset: string;
+    rail: string;
+    tx: string;
+    recipient: string;
+    post: MusePost;
+  } | null;
   /** true when the lifecycle was folded from the full thread, false when only the root is known */
   folded: boolean;
 };
@@ -243,6 +252,16 @@ export type PortHuman = {
   transport: string;
   languages: string[];
   declaredAt: number;
+};
+
+export type PortWalletLink = {
+  actor: PortActor;
+  address: string;
+  chainId: string;
+  challenge: string;
+  signature: string;
+  linkedAt: number;
+  record: MusePost;
 };
 
 export type HumanReputation = {
@@ -470,7 +489,7 @@ export function foldTask(task: PortTask, thread: ThreadNode, now = Date.now()): 
 
   for (const node of nodes) {
     const kind = recordKind(node.text);
-    if (!kind || kind === "task" || kind === "human") continue;
+    if (!kind || kind === "task" || kind === "human" || kind === "wallet") continue;
     if (closed) break;
     const actor = actorOf(node);
     const f = fields(node.text);
@@ -548,6 +567,7 @@ export function foldTask(task: PortTask, thread: ThreadNode, now = Date.now()): 
           asset: asset || task.asset,
           rail: (f.rail || "").slice(0, 24),
           tx: (f.tx || "").slice(0, 120),
+          recipient: (f.recipient || "").slice(0, 64),
           post: node,
         };
         folded.events.push(event);
@@ -613,6 +633,34 @@ export function foldHumans(posts: MusePost[]): PortHuman[] {
     .forEach((human) => {
       if (!byActor.has(human.actor.museId)) byActor.set(human.actor.museId, human);
     });
+  return [...byActor.values()];
+}
+
+export function parseWalletRecord(post: MusePost): PortWalletLink | null {
+  if (recordKind(post.text) !== "wallet") return null;
+  const f = fields(post.text);
+  const address = (f.address || "").trim();
+  const signature = (f.signature || "").trim();
+  if (!/^0x[a-f0-9]{40}$/i.test(address) || !/^0x[a-f0-9]+$/i.test(signature)) return null;
+  return {
+    actor: actorOf(post),
+    address,
+    chainId: (f.chain_id || "").slice(0, 24),
+    challenge: (f.challenge || "").slice(0, 400),
+    signature: signature.slice(0, 180),
+    linkedAt: postTime(post),
+    record: post,
+  };
+}
+
+/** Latest public wallet declaration wins. It is a signed declaration, not chain settlement verification. */
+export function foldWalletLinks(posts: MusePost[]): PortWalletLink[] {
+  const byActor = new Map<string, PortWalletLink>();
+  posts
+    .map(parseWalletRecord)
+    .filter((link): link is PortWalletLink => Boolean(link))
+    .sort((a, b) => a.linkedAt - b.linkedAt)
+    .forEach((link) => byActor.set(link.actor.museId, link));
   return [...byActor.values()];
 }
 
@@ -767,7 +815,10 @@ export function renderVerifyRecord(task: PortTask, result: "accepted" | "rejecte
     .join("\n");
 }
 
-export function renderSettleRecord(task: PortTask, input: { amount: string; asset: string; rail: string; tx: string }) {
+export function renderSettleRecord(
+  task: PortTask,
+  input: { amount: string; asset: string; rail: string; tx: string; recipient?: string },
+) {
   return [
     RECORD_MARKERS.settle,
     `task: ${task.ref}`,
@@ -775,9 +826,25 @@ export function renderSettleRecord(task: PortTask, input: { amount: string; asse
     `asset: ${input.asset.trim().toUpperCase()}`,
     input.rail.trim() ? `rail: ${input.rail.trim()}` : null,
     input.tx.trim() ? `tx: ${input.tx.trim()}` : null,
+    input.recipient?.trim() ? `recipient: ${input.recipient.trim()}` : null,
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+export function renderWalletRecord(input: {
+  address: string;
+  chainId: string;
+  challenge: string;
+  signature: string;
+}) {
+  return [
+    RECORD_MARKERS.wallet,
+    `address: ${input.address}`,
+    `chain_id: ${input.chainId}`,
+    `challenge: ${input.challenge.replace(/\s+/g, " ").slice(0, 400)}`,
+    `signature: ${input.signature}`,
+  ].join("\n");
 }
 
 export function renderCancelRecord(task: PortTask, reason: string) {

@@ -1053,7 +1053,8 @@ textarea {
 .terminal,
 .manifest,
 .work-order,
-.passport {
+.passport,
+.opportunity-intake {
   width: min(1420px, calc(100vw - 110px));
   min-height: 100%;
   margin-left: auto;
@@ -1062,6 +1063,487 @@ textarea {
   background: rgba(20, 26, 24, 0.985);
   box-shadow: -30px 30px 90px rgba(0, 0, 0, 0.34);
   animation: surfaceIn 560ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+/* Opportunity intake — an authored work-order object, not a generic form. */
+.opportunity-intake {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--port-ink-2);
+}
+
+.intake-head {
+  position: relative;
+  min-height: 142px;
+  display: grid;
+  grid-template-columns: minmax(360px, 1.4fr) minmax(370px, 0.75fr) 44px;
+  align-items: center;
+  gap: 35px;
+  padding: 25px 30px;
+  border-bottom: 1px solid var(--port-line);
+  background:
+    linear-gradient(90deg, transparent 0 61%, rgba(226, 220, 205, 0.035) 61% calc(61% + 1px), transparent calc(61% + 1px)),
+    var(--port-ink);
+}
+
+.intake-head > div > span {
+  color: var(--port-signal);
+  font: 500 8px/1 var(--port-mono);
+  letter-spacing: 0.07em;
+}
+
+.intake-head h1 {
+  margin: 12px 0 7px;
+  font: 700 clamp(42px, 4vw, 70px)/0.8 var(--port-cond);
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+}
+
+.intake-head p {
+  max-width: 680px;
+  margin: 0;
+  color: rgba(226, 220, 205, 0.54);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.intake-head dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0;
+  border-top: 1px solid var(--port-line);
+  border-bottom: 1px solid var(--port-line);
+}
+
+.intake-head dl div {
+  min-width: 0;
+  padding: 14px 12px;
+  border-right: 1px solid var(--port-line);
+}
+
+.intake-head dt {
+  color: rgba(226, 220, 205, 0.33);
+  font: 400 7px/1 var(--port-mono);
+}
+
+.intake-head dd {
+  overflow: hidden;
+  margin: 6px 0 0;
+  color: var(--port-ivory);
+  font: 600 11px/1 var(--port-cond);
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intake-body {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(560px, 1.7fr) minmax(335px, 0.78fr);
+}
+
+.intake-fields {
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid var(--port-line);
+}
+
+.intake-section {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  border-bottom: 1px solid var(--port-line);
+}
+
+.intake-section > header {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  padding: 25px 20px;
+  border-right: 1px solid var(--port-line);
+  background: rgba(226, 220, 205, 0.018);
+}
+
+.intake-section > header > i {
+  color: rgba(226, 220, 205, 0.17);
+  font: 400 29px/1 var(--port-mono);
+  font-style: normal;
+}
+
+.intake-section > header span {
+  display: grid;
+  gap: 7px;
+}
+
+.intake-section > header b {
+  color: var(--port-signal);
+  font: 700 17px/1 var(--port-cond);
+  letter-spacing: 0.09em;
+}
+
+.intake-section > header em {
+  color: rgba(226, 220, 205, 0.38);
+  font-size: 9px;
+  font-style: normal;
+  line-height: 1.35;
+}
+
+.intake-section > div {
+  min-width: 0;
+  display: grid;
+  gap: 22px;
+  padding: 25px 28px 28px;
+}
+
+.intake-section label {
+  display: grid;
+  gap: 8px;
+  color: rgba(226, 220, 205, 0.4);
+  font: 500 8px/1 var(--port-mono);
+}
+
+.intake-section input,
+.intake-section textarea {
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid rgba(226, 220, 205, 0.24);
+  border-radius: 0;
+  outline: none;
+  color: var(--port-ivory);
+  background: transparent;
+  font: 400 14px/1.5 var(--port-font);
+  resize: vertical;
+}
+
+.intake-section input:focus,
+.intake-section textarea:focus {
+  border-color: var(--port-signal);
+}
+
+.intake-section input::placeholder,
+.intake-section textarea::placeholder {
+  color: rgba(226, 220, 205, 0.25);
+}
+
+.intake-title input {
+  padding-top: 8px;
+  font: 600 clamp(21px, 1.7vw, 30px)/1.15 var(--port-cond);
+  letter-spacing: 0.01em;
+}
+
+.intake-choice > span {
+  display: block;
+  margin-bottom: 9px;
+  color: rgba(226, 220, 205, 0.4);
+  font: 500 8px/1 var(--port-mono);
+}
+
+.intake-choice > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  background: rgba(226, 220, 205, 0.12);
+}
+
+.intake-choice button {
+  min-height: 38px;
+  flex: 1 0 auto;
+  padding: 0 12px;
+  border: 0;
+  color: rgba(226, 220, 205, 0.5);
+  background: var(--port-carbon);
+  font: 600 10px/1 var(--port-cond);
+  letter-spacing: 0.045em;
+  cursor: pointer;
+}
+
+.intake-choice button:hover {
+  color: var(--port-ivory);
+  background: #303733;
+}
+
+.intake-choice button.on {
+  color: var(--port-ink);
+  background: var(--port-ivory);
+}
+
+.destination-choice > div {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.destination-choice button {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.destination-choice button i {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(226, 220, 205, 0.28);
+  color: var(--port-signal);
+  font: 500 8px/1 var(--port-mono);
+  font-style: normal;
+}
+
+.destination-choice button.on i {
+  border-color: rgba(19, 24, 23, 0.3);
+  color: var(--port-rust);
+}
+
+.intake-pair {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr 1.45fr;
+  gap: 20px;
+}
+
+.clearance-choice > div {
+  max-width: 360px;
+}
+
+.clearance-choice button {
+  min-width: 58px;
+}
+
+.intake-blocked {
+  margin: 0;
+  padding: 16px 28px;
+  border-bottom: 1px solid rgba(233, 90, 43, 0.45);
+  color: #e18061;
+  background: rgba(233, 90, 43, 0.08);
+  font-size: 11px;
+}
+
+.opportunity-file {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  color: var(--port-ink);
+  background:
+    linear-gradient(0deg, rgba(19, 24, 23, 0.04) 1px, transparent 1px),
+    var(--port-ivory);
+  background-size: 100% 42px, auto;
+}
+
+.opportunity-file > header {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--port-line-dark);
+  font: 500 8px/1 var(--port-mono);
+  letter-spacing: 0.04em;
+}
+
+.opportunity-file > header b {
+  padding: 6px 8px;
+  color: var(--port-rust);
+  border: 1px solid currentColor;
+  font: 600 8px/1 var(--port-mono);
+}
+
+.file-identity {
+  min-height: 105px;
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  align-items: center;
+  gap: 15px;
+  padding: 18px;
+  border-bottom: 1px solid var(--port-line-dark);
+}
+
+.file-identity > i {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  color: var(--port-ivory);
+  background: var(--port-rust);
+  font: 700 20px/1 var(--port-cond);
+  font-style: normal;
+}
+
+.file-identity > span {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.file-identity small {
+  color: rgba(19, 24, 23, 0.43);
+  font: 400 7px/1 var(--port-mono);
+}
+
+.file-identity strong {
+  overflow: hidden;
+  font: 700 23px/0.95 var(--port-cond);
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.file-identity em {
+  color: var(--port-rust);
+  font: 600 9px/1 var(--port-mono);
+  font-style: normal;
+}
+
+.opportunity-file > dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  border-bottom: 1px solid var(--port-line-dark);
+}
+
+.opportunity-file > dl div {
+  min-width: 0;
+  padding: 12px 18px;
+  border-right: 1px solid var(--port-line-dark);
+  border-bottom: 1px solid var(--port-line-dark);
+}
+
+.opportunity-file dt {
+  color: rgba(19, 24, 23, 0.42);
+  font: 400 7px/1 var(--port-mono);
+}
+
+.opportunity-file dd {
+  overflow: hidden;
+  margin: 6px 0 0;
+  font: 600 12px/1 var(--port-cond);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opportunity-file > section {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--port-line-dark);
+}
+
+.opportunity-file > section > span {
+  color: var(--port-rust);
+  font: 500 7px/1 var(--port-mono);
+}
+
+.opportunity-file > section p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 7px 0 0;
+  color: rgba(19, 24, 23, 0.62);
+  font-size: 9px;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.file-route {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--port-line-dark);
+}
+
+.file-route span {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: rgba(19, 24, 23, 0.38);
+  font: 500 7px/1 var(--port-mono);
+}
+
+.file-route span:not(:last-child)::after {
+  position: absolute;
+  top: 4px;
+  right: -50%;
+  left: 50%;
+  height: 1px;
+  content: "";
+  background: rgba(19, 24, 23, 0.18);
+}
+
+.file-route i {
+  position: relative;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border: 1px solid rgba(19, 24, 23, 0.35);
+  border-radius: 50%;
+  background: var(--port-ivory);
+}
+
+.file-route span.current {
+  color: var(--port-rust);
+}
+
+.file-route span.current i {
+  border-color: var(--port-rust);
+  background: var(--port-rust);
+}
+
+.opportunity-file details {
+  border-bottom: 1px solid var(--port-line-dark);
+}
+
+.opportunity-file summary {
+  padding: 12px 18px;
+  color: rgba(19, 24, 23, 0.5);
+  font: 500 7px/1 var(--port-mono);
+  cursor: pointer;
+}
+
+.opportunity-file details pre {
+  max-height: 135px;
+  margin: 0;
+  padding: 13px 18px;
+  overflow: auto;
+  border-top: 1px solid var(--port-line-dark);
+  color: rgba(19, 24, 23, 0.65);
+  background: rgba(19, 24, 23, 0.035);
+  font: 400 8px/1.45 var(--port-mono);
+  white-space: pre-wrap;
+}
+
+.opportunity-file details button {
+  margin: 0 18px 13px;
+  padding: 0;
+  border: 0;
+  color: var(--port-rust);
+  background: transparent;
+  font: 600 8px/1 var(--port-mono);
+  cursor: pointer;
+}
+
+.opportunity-file > footer {
+  margin-top: auto;
+  padding: 16px 18px 8px;
+}
+
+.opportunity-file > footer .port-action {
+  width: 100%;
+  min-height: 50px;
+}
+
+.opportunity-file > p {
+  margin: 0;
+  padding: 0 18px 16px;
+  color: rgba(19, 24, 23, 0.45);
+  font-size: 8px;
+  line-height: 1.4;
 }
 
 .terminal-head,
