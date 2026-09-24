@@ -1294,7 +1294,7 @@
 
 .diorama .quest-list > button,
 .diorama .navigator-list button,
-.diorama .market-list > a,
+.diorama .market-list > :is(a, button),
 .diorama .skill-list article {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1302,9 +1302,16 @@
   background: var(--paper-2);
 }
 
+.diorama .market-list > button {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .diorama .quest-list > button:hover,
 .diorama .navigator-list button:hover,
-.diorama .market-list > a:hover {
+.diorama .market-list > :is(a, button):hover {
   border-color: var(--border-strong);
   background: var(--paper-3);
 }
@@ -1315,7 +1322,7 @@
 
 .diorama .quest-list > button > b,
 .diorama .quest-zone,
-.diorama .market-list > a span b {
+.diorama .market-list > :is(a, button) span b {
   color: var(--terracotta);
 }
 
@@ -1328,7 +1335,7 @@
 
 .diorama .quest-list p,
 .diorama .quest-detail > p,
-.diorama .market-list > a p,
+.diorama .market-list > :is(a, button) p,
 .diorama .navigator-intro,
 .diorama .console-subject > small {
   color: var(--ink-soft);
@@ -1342,7 +1349,7 @@
 .diorama .navigator-list em,
 .diorama .skill-list small,
 .diorama .skill-list article > em,
-.diorama .market-list > a span small,
+.diorama .market-list > :is(a, button) span small,
 .diorama .market-summary > span,
 .diorama .market-summary > small,
 .diorama .console-subject > span,

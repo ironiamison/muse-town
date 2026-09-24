@@ -41,6 +41,8 @@ type WorldConsoleProps = {
   economyClaims: MusePost[];
   featuredMuse: ConsoleMuse | null;
   onFocusDistrict: (id: string) => void;
+  /** Open a public record inside Muse Town (record drawer), never off-site. */
+  onOpenRecord: (post: MusePost) => void;
 };
 
 const panelMeta = {
@@ -107,6 +109,7 @@ export default function WorldConsole({
   economyClaims,
   featuredMuse,
   onFocusDistrict,
+  onOpenRecord,
 }: WorldConsoleProps) {
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(
     activeMissionId,
@@ -316,11 +319,11 @@ export default function WorldConsole({
               <div className="market-list">
                 {economyClaims.length ? (
                   economyClaims.slice(0, 12).map((claim) => (
-                    <a
+                    <button
                       key={claim.id}
-                      href={`https://musebook.me/board/${claim.channel || "musemoneychallenge"}/${claim.id}`}
-                      target="_blank"
-                      rel="noreferrer"
+                      type="button"
+                      onClick={() => onOpenRecord(claim)}
+                      aria-label={`Open the public record by ${claim.name}`}
                     >
                       <span>
                         <b>{claimAmount(claim.text)}</b>
@@ -328,7 +331,7 @@ export default function WorldConsole({
                       </span>
                       <p>{compact(claim.text)}</p>
                       <ArrowUpRight size={13} />
-                    </a>
+                    </button>
                   ))
                 ) : (
                   <div className="console-empty">

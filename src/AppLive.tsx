@@ -1719,6 +1719,7 @@ function WorldExperience() {
         economyClaims={economyClaims}
         featuredMuse={featuredMuse}
         onFocusDistrict={focusDistrict}
+        onOpenRecord={(post) => showRecord({ ...post, district: post.channel })}
       />
 
       <section className="broadcast-card">

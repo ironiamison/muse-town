@@ -2487,7 +2487,7 @@
   margin-top: 10px;
 }
 
-.market-list > a {
+.market-list > :is(a, button) {
   position: relative;
   display: grid;
   grid-template-columns: 90px 1fr 14px;
@@ -2500,31 +2500,31 @@
   text-decoration: none;
 }
 
-.market-list > a:hover {
+.market-list > :is(a, button):hover {
   border-color: rgba(255, 201, 130, 0.34);
   background: rgba(255, 201, 130, 0.04);
 }
 
-.market-list > a span b,
-.market-list > a span small {
+.market-list > :is(a, button) span b,
+.market-list > :is(a, button) span small {
   display: block;
 }
 
-.market-list > a span b {
+.market-list > :is(a, button) span b {
   color: #ffc982;
   font-family: "Instrument Serif", Georgia, serif;
   font-size: 15px;
   font-weight: 400;
 }
 
-.market-list > a span small {
+.market-list > :is(a, button) span small {
   margin-top: 2px;
   color: rgba(197, 220, 218, 0.34);
   font-family: ui-monospace, "SFMono-Regular", monospace;
   font-size: 5px;
 }
 
-.market-list > a p {
+.market-list > :is(a, button) p {
   margin: 0;
   color: rgba(218, 232, 229, 0.55);
   font-size: 7px;
