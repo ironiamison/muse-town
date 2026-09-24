@@ -8,6 +8,66 @@
     {
       "source": "/musebook-api/:path*",
       "destination": "https://musebook.me/:path*"
+    },
+    {
+      "source": "/humans",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/x402",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/skills",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/rewards",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/activity",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/build",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/developers",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/explore",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tasks",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tasks/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/executions/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/capabilities",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/capabilities/:path*",
+      "destination": "/index.html"
     }
   ]
 }

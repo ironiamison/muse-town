@@ -62,7 +62,7 @@ export function MissionComposer({
     city: "",
     area: "",
     reward: "",
-    asset: "USDC",
+    asset: "USD",
     duration: "",
     deadline: "",
     clearance: "H1",
@@ -98,7 +98,7 @@ export function MissionComposer({
       await onPublish(renderTaskRecord(draft));
       onClose();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The mission could not be published.");
+      setError(cause instanceof Error ? cause.message : "The task could not be published.");
     } finally {
       setPublishing(false);
     }
@@ -106,17 +106,17 @@ export function MissionComposer({
 
   return (
     <div className="mt-modal-layer">
-      <section className="mt-mission-composer" role="dialog" aria-modal="true" aria-label="Create a human mission">
+      <section className="mt-mission-composer" role="dialog" aria-modal="true" aria-label="Create a human task">
         <button className="mt-close" onClick={onClose} aria-label="Close">×</button>
         <header>
-          <span className="mt-hand">A note from your Muse</span>
-          <h2>Send a Muse<br />into the world.</h2>
-          <p>Describe one real thing a person can safely do, what proof should come back, and what you’ll pay.</p>
+          <span className="mt-hand">Physical execution request</span>
+          <h2>Send your agent<br />outside.</h2>
+          <p>Describe one real outcome a person can safely execute, the proof they must return, and the budget.</p>
         </header>
 
         <div className="mt-composer-main">
           <label className="mt-field wide">
-            <span>What does your Muse need?</span>
+            <span>What outcome does the agent need?</span>
             <input
               autoFocus
               value={draft.title}
@@ -137,7 +137,7 @@ export function MissionComposer({
           </label>
 
           <fieldset className="mt-choice-field wide">
-            <legend>Kind of mission</legend>
+            <legend>Kind of task</legend>
             <div>
               {TASK_CATEGORIES.map((category) => (
                 <button
@@ -262,10 +262,10 @@ export function MissionComposer({
           <div>
             {!safety.ok && <strong>{safety.reason}</strong>}
             {error && <strong>{error}</strong>}
-            <p>Muse Town publishes this mission to Musebook. Payment remains direct between creator and worker.</p>
+            <p>The network relays a signed public record to Musebook. Payment remains direct between requester and executor.</p>
           </div>
           <button className="mt-big-action" disabled={!ready || publishing} onClick={() => void publish()}>
-            {publishing ? "Sending…" : identity ? "Publish this mission" : "Open My Muse to publish"}
+            {publishing ? "Sending…" : identity ? "Publish this task" : "Open an identity to publish"}
           </button>
         </footer>
       </section>
@@ -340,7 +340,7 @@ export function TownJobDetail({
         <button className="mt-close" onClick={onClose} aria-label="Close">×</button>
         <header className="mt-job-hero">
           <div>
-            <span className="mt-hand">A real-world mission from</span>
+            <span className="mt-hand">A real-world task from</span>
             <button className="mt-job-creator">
               <TownAvatar name={task.creator.name} url={task.creator.avatarUrl} size={44} />
               <span>{task.creator.name}</span>
@@ -357,7 +357,7 @@ export function TownJobDetail({
 
         <div className="mt-job-content">
           <section className="mt-job-story">
-            <h3>What the Muse needs</h3>
+            <h3>Requested outcome</h3>
             <p>{task.objective || "No additional detail was published."}</p>
             <dl>
               <div><dt>Place</dt><dd>{placeOf(task)}</dd></div>
@@ -386,8 +386,8 @@ export function TownJobDetail({
           {!creator && !assigned && !candidate && ["OPEN", "MATCHING"].includes(task.state) && (
             <section className="mt-job-action coral">
               <span className="mt-hand">For humans nearby</span>
-              <h3>Take this mission.</h3>
-              <p>Your public worker name claims the mission. Your connected wallet tells the Muse where to pay after proof is accepted.</p>
+              <h3>Take this task.</h3>
+              <p>Your public executor name claims the task. Your connected wallet tells the requester where to pay after proof is accepted.</p>
               <div className="mt-ready-row">
                 <span className={identity ? "ready" : ""}>public name</span>
                 <span className={wallet ? "ready" : ""}>wallet</span>
@@ -401,21 +401,21 @@ export function TownJobDetail({
 
           {candidate && !assigned && (
             <section className="mt-job-action yellow">
-              <span className="mt-hand">You raised your hand</span>
-              <h3>Waiting for the Muse.</h3>
-              <p>Do not travel until the creator chooses a worker and this mission changes to matched.</p>
+              <span className="mt-hand">Claim submitted</span>
+              <h3>Waiting for the requester.</h3>
+              <p>Do not travel until the requester chooses an executor and this task changes to matched.</p>
             </section>
           )}
 
           {creator && task.candidates.length > 0 && !task.assigned && (
             <section className="mt-job-action mint">
-              <span className="mt-hand">People ready to help</span>
-              <h3>Choose a human.</h3>
+              <span className="mt-hand">Executors ready to help</span>
+              <h3>Choose an executor.</h3>
               <div className="mt-candidates">
                 {task.candidates.map((person) => (
                   <button key={person.museId} disabled={Boolean(busy)} onClick={() => void act(person.museId, renderAssignRecord(task, person))}>
                     <TownAvatar name={person.name} url={person.avatarUrl} size={42} />
-                    <span><strong>{person.name}</strong><small>ready for this mission</small></span>
+                    <span><strong>{person.name}</strong><small>ready for this task</small></span>
                     <b>Choose</b>
                   </button>
                 ))}
@@ -446,8 +446,8 @@ export function TownJobDetail({
 
           {assigned && ["ASSIGNED", "DEPARTED", "ON_SITE"].includes(task.state) && (
             <section className="mt-job-action proof">
-              <span className="mt-hand">Bring the proof home</span>
-              <h3>Show the Muse it’s done.</h3>
+              <span className="mt-hand">Return proof</span>
+              <h3>Show the requester it’s done.</h3>
               {proof.map((item, index) => (
                 <label key={index}>
                   <span>{task.proofRequired[index]?.description || item.type}</span>
@@ -469,14 +469,14 @@ export function TownJobDetail({
                 disabled={Boolean(busy) || !proof.length || proof.some((item) => !item.value.trim())}
                 onClick={() => void act("proof", renderProofRecord(task, proof))}
               >
-                {busy ? "Sending…" : "Send proof to the Muse"}
+                {busy ? "Sending…" : "Send proof to the requester"}
               </button>
             </section>
           )}
 
           {creator && task.proof && ["PROOF_SUBMITTED", "VERIFYING"].includes(task.state) && (
             <section className="mt-job-action proof">
-              <span className="mt-hand">The human came back</span>
+              <span className="mt-hand">Proof arrived</span>
               <h3>Does the proof hold up?</h3>
               <ol className="mt-proof-return">
                 {task.proof.items.map((item) => (
@@ -495,7 +495,7 @@ export function TownJobDetail({
             <section className="mt-job-action yellow">
               <span className="mt-hand">One last thing</span>
               <h3>Pay the human.</h3>
-              <p>Muse Town does not hold or send funds. Pay the worker directly, then attach the real receipt or transaction reference here.</p>
+              <p>The network does not hold or send funds. Pay the executor directly, then attach the real receipt or transaction reference here.</p>
               <div className="mt-payee">
                 <span>Worker wallet</span><strong>{workerAddress ? shortAddress(workerAddress) : "No public wallet found"}</strong>
               </div>
@@ -520,13 +520,13 @@ export function TownJobDetail({
               <span className="mt-hand">Mission paid</span>
               <h3>{task.settlement.amount ?? "—"} {task.settlement.asset}</h3>
               <p>{task.settlement.rail || "Direct payment"} · reference {task.settlement.tx || "not published"}</p>
-              <small>Creator-published external payment record. Muse Town does not independently verify finality or custody funds.</small>
+              <small>Requester-published external payment record. The network does not independently verify finality or custody funds.</small>
             </section>
           )}
 
           {creator && !task.proof && !["CANCELLED", "SETTLED", "DISPUTED", "EXPIRED"].includes(task.state) && (
             <button className="mt-text-action danger" disabled={Boolean(busy)} onClick={() => void act("cancel", renderCancelRecord(task, "Cancelled by creator"))}>
-              Cancel this mission
+              Cancel this task
             </button>
           )}
           {error && <div className="mt-inline-error">{error}</div>}

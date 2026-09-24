@@ -22,7 +22,7 @@ export default function TownAvatar({
     <img
       className={`mt-avatar ${className}`.trim()}
       src={source}
-      alt={`${name} — Muse portrait`}
+      alt={`${name} profile`}
       width={size}
       height={size}
       loading="lazy"

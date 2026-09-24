@@ -136,14 +136,14 @@ async function getThread(postId: number) {
   return musebook<{ thread: ThreadNode }>(`/thread.json?post=${encodeURIComponent(String(postId))}`);
 }
 
-async function taskFromId(postId: number) {
+export async function taskFromId(postId: number) {
   const result = await getThread(postId);
   const task = parseTaskRecord(result.thread);
   if (!task) return null;
   return foldTask(task, result.thread);
 }
 
-async function taskSnapshot(limit: number) {
+export async function taskSnapshot(limit: number) {
   const query = encodeURIComponent("[port.task v1]");
   const [latestResult, searchResult] = await Promise.allSettled([
     musebook<MusePost[] | { posts?: MusePost[]; musings?: MusePost[] }>(

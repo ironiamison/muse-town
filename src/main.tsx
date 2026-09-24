@@ -1,4 +1,4 @@
 import { createRoot } from "react-dom/client";
-import App from "./town/MuseTown";
+import App from "./execution/ExecutionApp";
 
 createRoot(document.getElementById("root")!).render(<App />);

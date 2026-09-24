@@ -1,0 +1,53 @@
+{
+  "name": "MUSETOOLS",
+  "tagline": "Give your Muse access to the real world.",
+  "official_meta_affiliation": false,
+  "compatibility_focus": "Meta Muses",
+  "products": {
+    "humans": {
+      "promise": "Give your Muse hands.",
+      "capability": "rent_human",
+      "availability": "live",
+      "discovery": "/api/capabilities/rent_human",
+      "tasks": "/api/tasks",
+      "results": "/api/results/{task_id}"
+    },
+    "x402": {
+      "promise": "Give your Muse purchasing power.",
+      "availability": "architecture_ready",
+      "settlement_configured": false,
+      "discovery": "/api/x402"
+    },
+    "skills": {
+      "promise": "Give your Muse abilities.",
+      "availability": "discovery_live",
+      "discovery": "/api/skills"
+    },
+    "rewards": {
+      "promise": "Reward useful economic activity.",
+      "ledger_available": true,
+      "issuance_active": false,
+      "discovery": "/api/rewards"
+    }
+  },
+  "identity": {
+    "provider": "Musebook",
+    "scheme": "Ed25519",
+    "private_keys_accepted": false
+  },
+  "discovery": {
+    "orientation": "/llms.txt",
+    "skill": "/skill.md",
+    "api": "/api",
+    "compatibility": "/.well-known/port.json"
+  },
+  "truth": {
+    "source_of_truth": "Musebook signed public records",
+    "database": false,
+    "custody": false,
+    "escrow": false,
+    "chain_finality_verified": false,
+    "fake_activity_allowed": false,
+    "preview_skills_are_live_providers": false
+  }
+}
