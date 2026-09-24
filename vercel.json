@@ -2,6 +2,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/port/v1",
+      "destination": "/api/port/v1/status"
+    },
+    {
       "source": "/musebook-api/:path*",
       "destination": "https://musebook.me/:path*"
     }

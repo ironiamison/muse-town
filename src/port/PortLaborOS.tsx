@@ -29,6 +29,7 @@ import {
   type PortTask,
   type PortWalletLink,
 } from "../lib/port";
+import { getPortTaskSnapshot } from "../lib/port-api";
 import {
   chainLabel,
   connectWallet,
@@ -179,7 +180,8 @@ export default function PortLaborOS() {
   const sync = useCallback(async () => {
     setNetwork((current) => (current === "live" ? current : "connecting"));
     try {
-      const [latest, searched, residentResult, statResult] = await Promise.all([
+      const [apiSnapshot, latest, searched, residentResult, statResult] = await Promise.all([
+        getPortTaskSnapshot(50).catch(() => null),
         getLatest(PORT_CHANNEL).catch(() => []),
         searchTown("[port.", PORT_CHANNEL).catch(() => ({ results: [] })),
         getMuses().catch(() => []),
@@ -188,25 +190,31 @@ export default function PortLaborOS() {
       const observed = uniquePosts([...latest, ...(searched.results || [])]).filter((post) =>
         post.text.trimStart().startsWith("[port."),
       );
-      const threads = await Promise.allSettled(observed.slice(0, 60).map((post) => getThread(post.id)));
-      const roots = new Map<number, ThreadNode>();
-      threads.forEach((result) => {
-        if (result.status === "fulfilled") roots.set(result.value.thread.id, result.value.thread);
-      });
-      observed.forEach((post) => {
-        if (!post.parent_post_id && !roots.has(post.id)) roots.set(post.id, post as ThreadNode);
-      });
-      const nextTasks: PortTask[] = [];
-      const threadPosts: MusePost[] = [];
-      roots.forEach((root) => {
-        threadPosts.push(...flattenThread(root));
-        const task = parseTaskRecord(root);
-        if (task) nextTasks.push(foldTask(task, root));
-      });
-      const allRecords = uniquePosts([...observed, ...threadPosts]);
-      setTasks(nextTasks.sort((a, b) => taskTime(b) - taskTime(a)));
-      setRecords(allRecords);
-      setWalletLinks(foldWalletLinks(allRecords));
+      if (apiSnapshot) {
+        setTasks([...apiSnapshot.tasks].sort((a, b) => taskTime(b) - taskTime(a)));
+        setRecords(observed);
+        setWalletLinks(apiSnapshot.walletLinks);
+      } else {
+        const threads = await Promise.allSettled(observed.slice(0, 60).map((post) => getThread(post.id)));
+        const roots = new Map<number, ThreadNode>();
+        threads.forEach((result) => {
+          if (result.status === "fulfilled") roots.set(result.value.thread.id, result.value.thread);
+        });
+        observed.forEach((post) => {
+          if (!post.parent_post_id && !roots.has(post.id)) roots.set(post.id, post as ThreadNode);
+        });
+        const nextTasks: PortTask[] = [];
+        const threadPosts: MusePost[] = [];
+        roots.forEach((root) => {
+          threadPosts.push(...flattenThread(root));
+          const task = parseTaskRecord(root);
+          if (task) nextTasks.push(foldTask(task, root));
+        });
+        const allRecords = uniquePosts([...observed, ...threadPosts]);
+        setTasks(nextTasks.sort((a, b) => taskTime(b) - taskTime(a)));
+        setRecords(allRecords);
+        setWalletLinks(foldWalletLinks(allRecords));
+      }
       setResidents(residentResult);
       setStats(statResult);
       setLastSync(new Date());

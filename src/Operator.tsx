@@ -13,6 +13,8 @@ import {
   type MuseIdentity,
   type MusePost,
 } from "./lib/musebook";
+import { publishPortRecord } from "./lib/port-api";
+import { PORT_CHANNEL, isPortRecord } from "./lib/port";
 import { toHandle } from "./lib/passport";
 
 type DistrictInfo = { id: string; name: string; color: string; verb: string };
@@ -120,7 +122,10 @@ export default function OperatorDialog({
     setBusy(true);
     setError("");
     try {
-      const result = await publishPost(identity, channel, text.trim(), replyTo?.id);
+      const isPortWrite = channel === PORT_CHANNEL && isPortRecord({ text: text.trim() });
+      const result = isPortWrite
+        ? await publishPortRecord(identity, text.trim(), replyTo?.id)
+        : await publishPost(identity, channel, text.trim(), replyTo?.id);
       const id = result.id ?? result.post?.id;
       setPublished({ id });
       setReviewing(false);

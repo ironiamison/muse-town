@@ -8,7 +8,7 @@
    is not a signed public record, it does not exist for PORT.
    ========================================================================== */
 
-import type { MusePost, ThreadNode } from "./musebook";
+import type { MusePost, ThreadNode } from "./musebook.js";
 
 export const PORT_CHANNEL = "rentahuman";
 export const PORT_VERSION = "v1";
@@ -493,6 +493,8 @@ export function foldTask(task: PortTask, thread: ThreadNode, now = Date.now()): 
     if (closed) break;
     const actor = actorOf(node);
     const f = fields(node.text);
+    const declaredTask = (f.task || "").trim().toUpperCase();
+    if (declaredTask && declaredTask !== task.ref.toUpperCase()) continue;
     const isCreator = sameActor(actor, task.creator);
     const isAssigned = sameActor(actor, folded.assigned);
     const event: LifecycleEvent = { kind, post: node, actor, at: postTime(node), fields: f };
