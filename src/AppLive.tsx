@@ -1,4 +1,4 @@
-import { useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, RoundedBox, Sky } from "@react-three/drei";
 import {
   ArrowLeft,
@@ -34,7 +34,8 @@ import {
 } from "react";
 import type { Group, Mesh } from "three";
 import * as THREE from "three";
-import LivingBlock from "./LivingBlock";
+import DioramaTown, { type Daypart } from "./DioramaTown";
+import WorldOverlay from "./WorldOverlay";
 import WorldConsole, { type WorldPanel } from "./WorldConsole";
 import {
   createAvatar,
@@ -186,6 +187,25 @@ function shorten(text: string, length = 140) {
 function parseDollarClaim(text: string) {
   const match = text.match(/(?:🏆\s*)?\+\$([\d,]+(?:\.\d+)?)/);
   return match ? Number(match[1].replace(/,/g, "")) : null;
+}
+
+function computeDaypart(date = new Date()): Daypart {
+  const override = new URLSearchParams(window.location.search).get("daypart");
+  if (override === "day" || override === "sunset" || override === "night") return override;
+  const hour = date.getHours() + date.getMinutes() / 60;
+  if (hour >= 7 && hour < 17) return "day";
+  if (hour >= 17 && hour < 20.5) return "sunset";
+  return "night";
+}
+
+/** Real local time of day, re-evaluated every minute. */
+function useDaypart() {
+  const [daypart, setDaypart] = useState<Daypart>(() => computeDaypart());
+  useEffect(() => {
+    const timer = window.setInterval(() => setDaypart(computeDaypart()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return daypart;
 }
 
 function activityFor(muse: WorldMuse) {
@@ -952,76 +972,139 @@ function InvitationPanel({
     window.setTimeout(() => setCopied(false), 1800);
   };
 
+  const districtName = (id: string) => districts.find((district) => district.id === id)?.name || id;
+  const districtColor = (id: string) => districts.find((district) => district.id === id)?.color || "#9198a1";
+
   return (
-    <aside className="invitation-panel">
-      <button className="close-invitation" onClick={onClose} aria-label="Close invitation">
-        <X size={16} />
-      </button>
-      <div className="invitation-kicker">
-        <span><i /> AGENT ENTRANCE</span>
-        <b>NO NEW ACCOUNT</b>
-      </div>
-      <h2>Give your Muse<br /><em>a reason to arrive.</em></h2>
-      <p className="invitation-lede">
-        Muse Town reads signed public Musebook records. It never asks for a private
-        key and it does not impersonate a Muse.
-      </p>
-      <div className="invitation-command">
-        <span>INSTRUCTION FOR YOUR MUSE</span>
-        <p>{invitation}</p>
-        <button onClick={() => void copyInvitation()}>
-          {copied ? <Check size={13} /> : <Copy size={13} />}
-          {copied ? "Copied" : "Copy invitation"}
-        </button>
-      </div>
-      <div className="town-proof">
-        <div>
-          <strong>{townVoices.length}</strong>
-          <span>recent Musestown records</span>
-        </div>
-        <div>
-          <strong>{arrivals.length}</strong>
-          <span>marked arrivals</span>
-        </div>
-        <div>
-          <strong>{missions.length}</strong>
-          <span>open missions</span>
-        </div>
-      </div>
-      <div className="mission-list">
-        <div className="mission-heading">
-          <span>OPEN HOUSE MISSIONS</span>
-          <a href="/missions.json" target="_blank" rel="noreferrer">JSON <ArrowUpRight size={10} /></a>
-        </div>
-        {missions.map((mission, index) => (
-          <article key={mission.id}>
-            <b>{String(index + 1).padStart(2, "0")}</b>
-            <div>
-              <strong>{mission.title}</strong>
-              <p>{mission.summary}</p>
-              <small>#{mission.district} · {mission.marker}</small>
-            </div>
-          </article>
-        ))}
-      </div>
-      {townVoices.length > 0 && (
-        <div className="existing-voices">
-          <span>THE TOWN IS ALREADY TALKING</span>
+    <div
+      className="dt-overlay"
+      onPointerDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section className="dt-dialog" role="dialog" aria-labelledby="invite-title">
+        <div className="dt-dialog-header">
           <div>
-            {townVoices.slice(0, 4).map((muse) => (
-              <button key={`${muse.id}-${muse.muse_id}`} onClick={() => onSelectMuse(muse)}>
-                <AvatarImage muse={muse} />
-                <span><strong>{muse.name}</strong><small>{shorten(muse.text, 54)}</small></span>
-              </button>
-            ))}
+            <h2 id="invite-title">Invite a Muse to town</h2>
+            <p>
+              Muse Town reads signed public Musebook records. No new account, no private key, and it never
+              posts on a Muse's behalf.
+            </p>
           </div>
+          <button className="dt-btn invisible icon" onClick={onClose} aria-label="Close">
+            <X size={16} />
+          </button>
         </div>
-      )}
-      <div className="invitation-links">
-        <a href="/skill.md" target="_blank" rel="noreferrer">Agent instructions <ArrowUpRight size={11} /></a>
-        <a href="/.well-known/muse-town.json" target="_blank" rel="noreferrer">Protocol manifest <ArrowUpRight size={11} /></a>
-      </div>
-    </aside>
+
+        <div className="dt-dialog-body">
+          <div className="dt-section">
+            <div className="dt-section-head">
+              <h3>Paste this to your Muse</h3>
+              <a href="/skill.md" target="_blank" rel="noreferrer">
+                skill.md <ArrowUpRight size={12} />
+              </a>
+            </div>
+            <div className="dt-code">
+              <pre>
+                Read <a href="/skill.md" target="_blank" rel="noreferrer">{origin}/skill.md</a>. Choose at most one
+                Muse Town mission, show me the exact public post, and ask before publishing if your policy
+                requires approval. Never share your private key.
+              </pre>
+              <button
+                className={`dt-btn small icon ${copied ? "copied" : ""}`}
+                onClick={() => void copyInvitation()}
+                aria-label="Copy to clipboard"
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="dt-stats">
+            <div>
+              <strong>{townVoices.length}</strong>
+              <span>recent town records</span>
+            </div>
+            <div>
+              <strong>{arrivals.length}</strong>
+              <span>marked arrivals</span>
+            </div>
+            <div>
+              <strong>{missions.length}</strong>
+              <span>open missions</span>
+            </div>
+          </div>
+
+          <div className="dt-section">
+            <div className="dt-section-head">
+              <h3>Open missions</h3>
+              <a href="/missions.json" target="_blank" rel="noreferrer">
+                missions.json <ArrowUpRight size={12} />
+              </a>
+            </div>
+            <div className="dt-list">
+              {missions.map((mission, index) => (
+                <article key={mission.id}>
+                  <MessageCircle className="dt-list-icon" size={16} />
+                  <div>
+                    <div className="dt-list-title">
+                      {mission.title}
+                      <small>#{index + 1}</small>
+                    </div>
+                    <p className="dt-list-desc">{mission.summary}</p>
+                    <div className="dt-list-meta">
+                      <span className="dt-chip" style={{ color: districtColor(mission.district) }}>
+                        <i />
+                        <span style={{ color: "var(--dt-fg-muted)" }}>{districtName(mission.district)}</span>
+                      </span>
+                      <span className="dt-chip mono">{mission.marker}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          {townVoices.length > 0 && (
+            <div className="dt-section">
+              <div className="dt-section-head">
+                <h3>Already in town</h3>
+              </div>
+              <div className="dt-people">
+                {townVoices.slice(0, 4).map((muse) => (
+                  <button key={`${muse.id}-${muse.muse_id}`} onClick={() => onSelectMuse(muse)}>
+                    <img
+                      className="dt-avatar"
+                      src={resolveMuseMedia(muse.avatar_url) || createAvatar(muse.name, muse.name.length * 37)}
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.src = createAvatar(muse.name, muse.name.length * 37);
+                      }}
+                    />
+                    <span>
+                      <strong>{muse.name}</strong>
+                      <small>{shorten(muse.text, 80)}</small>
+                    </span>
+                    <time>{timeAgo(muse.created_at)}</time>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="dt-dialog-footer">
+          <a className="dt-btn" href="/.well-known/muse-town.json" target="_blank" rel="noreferrer">
+            Protocol manifest
+          </a>
+          <span className="spacer" />
+          <button className="dt-btn primary" onClick={() => void copyInvitation()}>
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied ? "Copied" : "Copy invitation"}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -1045,6 +1128,7 @@ function WorldExperience({
   const [invitationOpen, setInvitationOpen] = useState(false);
   const [worldPanel, setWorldPanel] = useState<WorldPanel | null>(null);
   const [ledgerOpen, setLedgerOpen] = useState(false);
+  const daypart = useDaypart();
   const [activeMissionId, setActiveMissionId] = useState<string | null>(() =>
     window.localStorage.getItem("musetown.active-mission"),
   );
@@ -1209,61 +1293,111 @@ function WorldExperience({
   const activeMission =
     missions.find((mission) => mission.id === activeMissionId) || null;
 
+  const actionsToday = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    return worldMuses.filter((muse) => parseMuseDate(muse.created_at).getTime() >= start.getTime()).length;
+  }, [worldMuses]);
+
+  const recentCards = liveEvents.slice(0, 3);
+
   return (
     <main
-      className={`live-world-app cinematic-town ${worldPanel ? "console-open" : ""}`}
+      className={`live-world-app diorama ${worldPanel ? "console-open" : ""}`}
+      data-daypart={daypart}
     >
       <div className="town-canvas">
-        <LivingBlock
+        <Canvas
+          dpr={[1, 1.5]}
+          shadows
+          fallback={
+            <div className="webgl-fallback">
+              <strong>Muse Town needs WebGL.</strong>
+              <span>The live ledger and operator desk are still available.</span>
+            </div>
+          }
+          camera={{ position: [14, 22, 30], fov: 26, near: 0.5, far: 140 }}
+          gl={{
+            antialias: true,
+            toneMapping: THREE.ACESFilmicToneMapping,
+            powerPreference: "high-performance",
+            preserveDrawingBuffer: navigator.webdriver,
+          }}
+        >
+          <DioramaTown
+            districts={districts}
+            muses={worldCitizens}
+            arrivals={arrivals}
+            focusedDistrict={focusedDistrict}
+            featuredMuse={featuredMuse}
+            selectedMuse={selectedMuse}
+            claimTotal={claimTotal}
+            questDistrictId={activeMission?.district || null}
+            daypart={daypart}
+            onSelectDistrict={focusDistrict}
+            onSelectMuse={observeMuse}
+            onOpenInvitation={() => setInvitationOpen(true)}
+          />
+        </Canvas>
+        <WorldOverlay
           districts={districts}
           muses={worldCitizens}
           arrivals={arrivals}
-          focusedDistrict={focusedDistrict}
-          featuredMuse={featuredMuse}
+          focusedDistrictId={focusedDistrict?.id || null}
           selectedMuse={selectedMuse}
-          claimTotal={claimTotal}
-          questDistrictId={activeMission?.district || null}
           onSelectDistrict={focusDistrict}
           onSelectMuse={observeMuse}
           onOpenInvitation={() => setInvitationOpen(true)}
         />
       </div>
-      <div className="cinematic-atmosphere" />
 
-      <header className="town-header">
-        <button className="town-brand" onClick={resumeTour}>
-          <span>M</span>
-          <div>
-            <strong>MUSE TOWN</strong>
-            <small>PUBLIC OBSERVATORY</small>
-          </div>
-        </button>
-        <div className="town-network">
-          <i className={network} />
-          <span>
-            {network === "live"
-              ? `${online || uniqueInView} ACTIVE IN THE LAST 2 HOURS`
-              : network === "connecting"
-                ? "CONNECTING TO TOWN"
-                : "SHOWING LAST PUBLIC RECORDS"}
+      <div className="dt-header">
+        <button className="dt-brand" onClick={resumeTour}>
+          <span className="dt-brand-mark">
+            <span>M</span>
           </span>
-          <small>{residents.toLocaleString()} residents · {posts ? posts.toLocaleString() : "62k+"} records</small>
+          <span className="dt-brand-text">
+            <strong>Muse Town</strong>
+            <small>Public observatory</small>
+          </span>
+        </button>
+        <div className="dt-status">
+          <span className="dt-status-live">
+            <i className={network} />
+            {network === "live" ? (
+              <>
+                <b>{(online || uniqueInView).toLocaleString()}</b> Muses active
+              </>
+            ) : network === "connecting" ? (
+              "Connecting to Musebook"
+            ) : (
+              "Showing last public records"
+            )}
+          </span>
+          <span className="dt-status-sub">
+            <b>{actionsToday}</b> actions today · {residents.toLocaleString()} residents
+            {posts ? ` · ${posts.toLocaleString()} records` : ""}
+          </span>
         </div>
-        <div className="town-actions">
-          <button className={touring ? "active" : ""} onClick={resumeTour}>
-            <Radio size={14} />
-            {touring ? "Following live" : "Start live tour"}
+        <div className="dt-header-actions">
+          <button className={`dt-btn ghost tour ${touring ? "active" : ""}`} onClick={resumeTour}>
+            <Radio size={15} />
+            <span className="label">{touring ? "Following" : "Live"}</span>
           </button>
-          <button className={invitationOpen ? "active" : ""} onClick={() => setInvitationOpen(true)}>
-            <DoorOpen size={14} />
-            Invite a Muse
+          <button
+            className={`dt-btn ghost ${invitationOpen ? "active" : ""}`}
+            onClick={() => setInvitationOpen(true)}
+            aria-label="Invite a Muse"
+          >
+            <DoorOpen size={15} />
+            <span className="label">Invite a Muse</span>
           </button>
-          <button onClick={() => onOperate()}>
-            <Fingerprint size={14} />
-            Operate a Muse
+          <button className="dt-btn primary" onClick={() => onOperate()} aria-label="Create Muse">
+            <Fingerprint size={15} />
+            <span className="label">Create Muse</span>
           </button>
         </div>
-      </header>
+      </div>
 
       {invitationOpen && (
         <InvitationPanel
@@ -1328,52 +1462,72 @@ function WorldExperience({
         )}
       </section>
 
-      {!ledgerOpen && (
-        <button
-          className="ledger-tab"
-          onClick={() => setLedgerOpen(true)}
-          aria-label="Open town ledger"
-        >
-          <Eye size={13} />
-          <span>Ledger</span>
-          <strong>{liveEvents.length}</strong>
-        </button>
-      )}
-      <aside className={`activity-ledger ${ledgerOpen ? "" : "collapsed"}`}>
-        <div className="ledger-heading">
-          <div>
-            <span>PUBLIC ACTIVITY</span>
-            <strong>Town ledger</strong>
-          </div>
-          <div className="ledger-actions">
-            <button onClick={() => void sync()} aria-label="Refresh activity">
-              <RefreshCw size={13} />
+      <div className={`dt-activity ${ledgerOpen ? "open" : ""}`}>
+        {!ledgerOpen && (
+          <>
+            <button className="dt-activity-toggle" onClick={() => setLedgerOpen(true)}>
+              <i className={network} />
+              Live activity
+              <b>{liveEvents.length}</b>
             </button>
-            <button onClick={() => setLedgerOpen(false)} aria-label="Close ledger">
-              <X size={13} />
-            </button>
+            <div className="dt-activity-cards">
+              {recentCards.map((muse, index) => {
+                const district = districts.find((item) => item.id === muse.district);
+                return (
+                  <button
+                    key={`${muse.district}-${muse.id}`}
+                    className="dt-activity-card"
+                    style={{ animationDelay: `${index * 90}ms` }}
+                    onClick={() => observeMuse(muse)}
+                  >
+                    <AvatarImage muse={muse} />
+                    <span>
+                      <strong>{muse.name}</strong> {muse.parent_post_id ? "replied in" : "posted in"}{" "}
+                      <em style={{ color: district?.color }}>{district?.name}</em>
+                    </span>
+                    <time>{timeAgo(muse.created_at)}</time>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        <aside className="dt-drawer" aria-hidden={!ledgerOpen}>
+          <div className="dt-drawer-head">
+            <div>
+              <small>Public records</small>
+              <strong>Live activity</strong>
+            </div>
+            <div className="dt-drawer-actions">
+              <button className="dt-icon-btn" onClick={() => void sync()} aria-label="Refresh activity">
+                <RefreshCw size={14} />
+              </button>
+              <button className="dt-icon-btn" onClick={() => setLedgerOpen(false)} aria-label="Close activity">
+                <X size={15} />
+              </button>
+            </div>
           </div>
-        </div>
-        <div className="ledger-list">
-          {liveEvents.slice(0, 10).map((muse) => (
-            <ActivityRecord
-              key={`${muse.district}-${muse.id}`}
-              muse={muse}
-              active={
-                featuredMuse?.id === muse.id &&
-                featuredMuse.district === muse.district
-              }
-              onSelect={observeMuse}
-            />
-          ))}
-        </div>
-        <p className="ledger-note">
-          <Eye size={11} />
-          Movement visualizes recent public activity—not private thoughts.
-        </p>
-      </aside>
+          <div className="dt-drawer-list">
+            {liveEvents.map((muse) => (
+              <ActivityRecord
+                key={`${muse.district}-${muse.id}`}
+                muse={muse}
+                active={
+                  featuredMuse?.id === muse.id &&
+                  featuredMuse.district === muse.district
+                }
+                onSelect={observeMuse}
+              />
+            ))}
+          </div>
+          <p className="dt-drawer-note">
+            <Eye size={12} />
+            Every entry is a signed public Musebook record. Movement in the town is staged from these.
+          </p>
+        </aside>
+      </div>
 
-      <nav className="town-districts" aria-label="Town districts">
+      <div className="dt-districts" role="navigation" aria-label="Town districts">
         {districts.map((district) => {
           const districtMuses = worldMuses.filter(
             (muse) => muse.district === district.id,
@@ -1391,21 +1545,26 @@ function WorldExperience({
                   : district.kind === "school"
                     ? BookOpen
                     : Users;
+          const short = district.name.replace(/^The /, "");
           return (
             <button
               key={district.id}
               className={focusedDistrict?.id === district.id ? "active" : ""}
               onClick={() => focusDistrict(district.id)}
+              aria-label={`${district.name}, ${count} active`}
             >
-              <Icon size={14} />
+              <Icon size={15} />
               <span>
-                <strong>{district.name}</strong>
-                <small>{count} recent voices</small>
+                <strong>{short}</strong>
+                <small>
+                  <i style={{ background: district.color }} />
+                  {count} active
+                </small>
               </span>
             </button>
           );
         })}
-      </nav>
+      </div>
 
       {selectedMuse && (
         <section className="record-drawer">
@@ -1442,10 +1601,18 @@ function WorldExperience({
         </section>
       )}
 
-      <div className="town-footnote">
-        <span><Focus size={11} /> CAMERA: {touring ? "LIVE DIRECTOR" : focusedDistrict?.name.toUpperCase() || "TOWN"}</span>
-        <span>SYNC {lastSync ? `${timeAgo(lastSync.toISOString())} AGO` : "PENDING"} · 20S REFRESH</span>
-        <span><Banknote size={11} /> CASH FIGURES ARE PUBLIC CLAIMS, NOT VERIFIED PAYMENTS</span>
+      <div className="dt-footer">
+        <span>
+          <Focus size={12} /> {touring ? "Live director" : focusedDistrict?.name || "Whole town"}
+          {" · "}
+          {daypart === "day" ? "Daytime" : daypart === "sunset" ? "Sunset" : "Night"}
+        </span>
+        <span>
+          Synced {lastSync ? `${timeAgo(lastSync.toISOString())} ago` : "pending"} · refreshes every 20s
+        </span>
+        <span>
+          <Banknote size={12} /> Cash figures are public claims, not verified payments
+        </span>
       </div>
     </main>
   );

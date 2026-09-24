@@ -1,0 +1,1742 @@
+/* ==========================================================================
+   Muse Town · Diorama theme
+   Tokens + floating chrome. The world is the hero; UI floats over it.
+   ========================================================================== */
+
+.diorama {
+  --ink: #1d2331;
+  --ink-2: #2a3142;
+  --ink-soft: rgba(29, 35, 49, 0.72);
+  --paper: #f5efe3;
+  --paper-2: #ece3d2;
+  --paper-3: #e1d6c1;
+  --terracotta: #c96a4a;
+  --terracotta-deep: #a9553a;
+  --sage: #8fa98a;
+  --forest: #3f5f4a;
+  --amber: #d9a066;
+  --night: #151b28;
+  --muted: #7a7266;
+  --border: rgba(29, 35, 49, 0.14);
+  --border-strong: rgba(29, 35, 49, 0.32);
+  --shadow: 0 10px 30px rgba(52, 38, 22, 0.16), 0 1px 2px rgba(52, 38, 22, 0.08);
+  --shadow-lg: 0 24px 60px rgba(52, 38, 22, 0.24), 0 2px 6px rgba(52, 38, 22, 0.1);
+  --sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --radius: 10px;
+  --header-h: 58px;
+
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--sans);
+}
+
+.diorama[data-daypart="sunset"] {
+  --paper: #f6eee2;
+}
+
+.diorama[data-daypart="night"] {
+  --paper: #f1ebdf;
+  --shadow: 0 10px 30px rgba(8, 12, 24, 0.35), 0 1px 2px rgba(8, 12, 24, 0.2);
+  --shadow-lg: 0 24px 60px rgba(8, 12, 24, 0.5), 0 2px 6px rgba(8, 12, 24, 0.3);
+}
+
+.diorama .town-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.diorama .town-canvas canvas {
+  touch-action: none;
+  cursor: grab;
+}
+
+.diorama .town-canvas canvas:active {
+  cursor: grabbing;
+}
+
+/* --------------------------------------------------------------------------
+   Primitives
+   -------------------------------------------------------------------------- */
+
+.dt-btn {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 500 13px/1 var(--sans);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.dt-btn:hover {
+  background: var(--paper-2);
+  border-color: var(--ink);
+}
+
+.dt-btn.primary {
+  border-color: var(--terracotta);
+  background: var(--terracotta);
+  color: #fff8f0;
+}
+
+.dt-btn.primary:hover {
+  background: var(--terracotta-deep);
+  border-color: var(--terracotta-deep);
+}
+
+.dt-btn.ghost {
+  border-color: rgba(245, 239, 227, 0.22);
+  background: transparent;
+  color: rgba(245, 239, 227, 0.86);
+}
+
+.dt-btn.ghost:hover {
+  border-color: rgba(245, 239, 227, 0.6);
+  background: rgba(245, 239, 227, 0.08);
+  color: #fff;
+}
+
+.dt-btn.ghost.active {
+  border-color: var(--terracotta);
+  background: rgba(201, 106, 74, 0.18);
+  color: #fff;
+}
+
+.dt-btn.ghost.active svg {
+  color: #f1a583;
+}
+
+.dt-btn.invisible {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.dt-btn.invisible:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.dt-btn.icon {
+  width: 34px;
+  padding: 0;
+}
+
+.dt-btn.small {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.dt-btn.small.icon {
+  width: 28px;
+}
+
+.dt-icon-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.dt-icon-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.dt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font: 500 11.5px/1 var(--sans);
+  white-space: nowrap;
+}
+
+.dt-chip.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+}
+
+.dt-chip i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dt-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--paper-3);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+/* --------------------------------------------------------------------------
+   Header — thin, editorial
+   -------------------------------------------------------------------------- */
+
+.dt-header {
+  position: absolute;
+  z-index: 25;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--header-h);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 0 22px;
+  color: #f5efe3;
+  background: rgba(29, 35, 49, 0.96);
+  border-bottom: 1px solid rgba(245, 239, 227, 0.08);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.diorama[data-daypart="night"] .dt-header {
+  background: rgba(21, 27, 40, 0.98);
+}
+
+.dt-brand {
+  display: flex;
+  align-items: center;
+  justify-self: start;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dt-brand-mark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--terracotta);
+  color: #1d2331;
+}
+
+.dt-brand-mark span {
+  font: italic 400 22px/1 var(--serif);
+  transform: translateY(-1px);
+}
+
+.dt-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dt-brand-text strong {
+  font: 400 21px/1 var(--serif);
+  letter-spacing: 0.005em;
+}
+
+.dt-brand-text small {
+  color: rgba(245, 239, 227, 0.5);
+  font: 600 9.5px/1 var(--sans);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.dt-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.dt-status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 13px/1 var(--sans);
+  color: #f5efe3;
+}
+
+.dt-status-live b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dt-status-live i,
+.dt-activity-toggle i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7fc48a;
+  box-shadow: 0 0 0 3px rgba(127, 196, 138, 0.22);
+}
+
+.dt-status-live i.connecting,
+.dt-activity-toggle i.connecting {
+  background: var(--amber);
+  box-shadow: 0 0 0 3px rgba(217, 160, 102, 0.25);
+  animation: dt-blink 1.1s steps(2, end) infinite;
+}
+
+.dt-status-live i.offline,
+.dt-activity-toggle i.offline {
+  background: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(201, 106, 74, 0.25);
+}
+
+@keyframes dt-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.dt-status-sub {
+  color: rgba(245, 239, 227, 0.55);
+  font: 400 11.5px/1 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.dt-status-sub b {
+  color: rgba(245, 239, 227, 0.85);
+  font-weight: 600;
+}
+
+.dt-header-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+}
+
+.dt-header-actions .dt-btn.ghost svg {
+  color: rgba(245, 239, 227, 0.6);
+}
+
+/* --------------------------------------------------------------------------
+   In-world overlay: projected labels, PFP heads, tooltips
+   -------------------------------------------------------------------------- */
+
+.dt-overlay-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.dt-anchor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  opacity: 0;
+  transform-origin: 50% 50%;
+}
+
+.dt-anchor.citizen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dt-anchor.citizen:hover {
+  z-index: 2000 !important;
+}
+
+.dt-head {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 2.5px solid var(--terracotta);
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 3px 10px rgba(40, 30, 20, 0.35), inset 0 0 0 2px var(--paper);
+  cursor: pointer;
+  overflow: visible;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.dt-head:hover {
+  transform: translateY(-2px) scale(1.06);
+  box-shadow: 0 6px 16px rgba(40, 30, 20, 0.4), inset 0 0 0 2px var(--paper);
+}
+
+.dt-head.selected {
+  box-shadow: 0 0 0 4px rgba(201, 106, 74, 0.28), 0 6px 16px rgba(40, 30, 20, 0.4), inset 0 0 0 2px var(--paper);
+}
+
+.dt-head img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  -webkit-user-drag: none;
+}
+
+.dt-head-status {
+  position: absolute;
+  right: -2px;
+  bottom: -1px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: #4f9a63;
+}
+
+.diorama[data-daypart="night"] .dt-head-status {
+  background: #7fd68f;
+  box-shadow: 0 0 6px rgba(127, 214, 143, 0.8);
+}
+
+.dt-anchor.citizen .dt-tip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  /* Heads scale with depth; the card keeps a constant on-screen size. */
+  transform: translateX(-50%) scale(var(--inv, 1));
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+
+.dt-anchor.citizen .dt-tip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%) rotate(45deg);
+  background: rgba(245, 239, 227, 0.97);
+  border-right: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.dt-anchor.citizen .dt-tip.selected::after {
+  border-color: var(--terracotta);
+}
+
+.dt-label {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: rgba(245, 239, 227, 0.94);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transform: translateY(0);
+  transition: transform 160ms ease, border-color 160ms ease;
+  white-space: nowrap;
+  font-family: var(--sans);
+}
+
+.dt-label:hover {
+  transform: translateY(-2px);
+  border-color: var(--ink);
+}
+
+.dt-label.active {
+  border-color: var(--terracotta);
+  box-shadow: var(--shadow), 0 0 0 3px rgba(201, 106, 74, 0.18);
+}
+
+.dt-label strong {
+  font: 400 17px/1.1 var(--serif);
+}
+
+.dt-label.small strong {
+  font-size: 14px;
+}
+
+.dt-label span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font: 500 11px/1 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.dt-label span i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dt-tip {
+  width: 230px;
+  animation: dt-rise 160ms ease both;
+  padding: 10px 12px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: rgba(245, 239, 227, 0.97);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  text-align: left;
+  font-family: var(--sans);
+}
+
+.dt-tip.selected {
+  border-color: var(--terracotta);
+}
+
+.dt-tip-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dt-tip-head strong {
+  font: 400 18px/1.1 var(--serif);
+}
+
+.dt-tip-head i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4f9a63;
+}
+
+.dt-tip-verb {
+  display: block;
+  margin-top: 2px;
+  color: var(--terracotta);
+  font: 600 11px/1.2 var(--sans);
+  letter-spacing: 0.02em;
+}
+
+.dt-tip p {
+  margin: 7px 0 6px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.dt-tip small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@keyframes dt-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Bottom district navigator
+   -------------------------------------------------------------------------- */
+
+.dt-districts {
+  position: absolute;
+  z-index: 14;
+  left: 50%;
+  bottom: 44px;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 4px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: rgba(245, 239, 227, 0.94);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+}
+
+.dt-districts button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.dt-districts button svg {
+  color: var(--muted);
+}
+
+.dt-districts button:hover {
+  background: var(--paper-2);
+}
+
+.dt-districts button.active {
+  background: var(--paper-2);
+}
+
+.dt-districts button.active::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--terracotta);
+}
+
+.dt-districts button.active svg {
+  color: var(--terracotta);
+}
+
+.dt-districts button > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dt-districts strong {
+  font: 400 16px/1 var(--serif);
+}
+
+.dt-districts small {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font: 500 11px/1 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.dt-districts small i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* --------------------------------------------------------------------------
+   Live activity: toggle + floating cards + slide-in drawer
+   -------------------------------------------------------------------------- */
+
+.dt-activity {
+  position: absolute;
+  z-index: 24;
+  top: calc(var(--header-h) + 16px);
+  right: 20px;
+  bottom: 0;
+  width: 300px;
+  pointer-events: none;
+}
+
+.dt-activity-toggle {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 34px;
+  padding: 0 12px 0 12px;
+  margin-left: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: rgba(245, 239, 227, 0.94);
+  color: var(--ink);
+  font: 500 13px/1 var(--sans);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  float: right;
+  transition: transform 140ms ease;
+}
+
+.dt-activity-toggle:hover {
+  transform: translateY(-1px);
+}
+
+.dt-activity-toggle b {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dt-activity-cards {
+  clear: both;
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.dt-activity-card {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px 9px 9px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(245, 239, 227, 0.92);
+  color: var(--ink);
+  text-align: left;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  animation: dt-card-in 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: transform 140ms ease, border-color 140ms ease;
+}
+
+.dt-activity-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+}
+
+.dt-activity-card img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--paper-3);
+}
+
+.dt-activity-card > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 400 12.5px/1.3 var(--sans);
+  color: var(--ink-soft);
+}
+
+.dt-activity-card strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.dt-activity-card em {
+  font-style: normal;
+  font-weight: 600;
+}
+
+.dt-activity-card time {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes dt-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+.dt-drawer {
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 40px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  transform: translateX(calc(100% + 28px));
+  opacity: 0;
+  transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 240ms ease;
+  overflow: hidden;
+}
+
+.dt-activity.open .dt-drawer {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.dt-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dt-drawer-head small {
+  display: block;
+  color: var(--muted);
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.dt-drawer-head strong {
+  display: block;
+  margin-top: 4px;
+  font: 400 20px/1 var(--serif);
+}
+
+.dt-drawer-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.dt-drawer-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dt-drawer-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dt-drawer-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.dt-drawer-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.dt-drawer-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+/* activity records (reused component) */
+.diorama .activity-record {
+  grid-template-columns: 32px 1fr auto;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.diorama .activity-record:hover,
+.diorama .activity-record.active {
+  background: var(--paper-2);
+}
+
+.diorama .activity-record img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.diorama .activity-record strong {
+  display: block;
+  font: 600 13px/1.2 var(--sans);
+}
+
+.diorama .activity-record small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font: 400 11.5px/1.2 var(--sans);
+}
+
+.diorama .activity-record time {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   Left rail + sliding panels (WorldConsole, reused markup)
+   -------------------------------------------------------------------------- */
+
+.diorama .world-dock {
+  top: calc(var(--header-h) + 16px);
+  left: 20px;
+  width: 68px;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: rgba(245, 239, 227, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.diorama .world-dock button {
+  min-height: 56px;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 5px;
+  padding: 8px 4px 7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.diorama .world-dock button:hover {
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.diorama .world-dock button.active {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.diorama .world-dock button > span {
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.04em;
+  color: inherit;
+}
+
+.diorama .world-dock button > b {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--terracotta);
+  color: #fff;
+  font: 600 9.5px/16px var(--sans);
+  text-align: center;
+}
+
+.diorama .world-console {
+  top: calc(var(--header-h) + 16px);
+  bottom: 96px;
+  left: 100px;
+  width: 392px;
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: none;
+}
+
+.diorama .world-console > header {
+  position: static;
+  height: auto;
+  padding: 16px 16px 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.diorama .world-console > header span {
+  color: var(--muted);
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.16em;
+}
+
+.diorama .world-console > header h2 {
+  color: var(--ink);
+  font: 400 22px/1.1 var(--serif);
+}
+
+.diorama .world-console > header button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--ink-soft);
+  background: transparent;
+}
+
+.diorama .console-content {
+  height: calc(100% - 68px);
+  padding: 16px 18px 18px;
+}
+
+.diorama .quest-trail {
+  color: var(--muted);
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.08em;
+}
+
+.diorama .quest-trail i {
+  border-color: var(--border-strong);
+  color: var(--ink);
+}
+
+.diorama .quest-trail em {
+  background: var(--border);
+}
+
+.diorama .quest-list > button,
+.diorama .navigator-list button,
+.diorama .market-list > a,
+.diorama .skill-list article {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--paper-2);
+}
+
+.diorama .quest-list > button:hover,
+.diorama .navigator-list button:hover,
+.diorama .market-list > a:hover {
+  border-color: var(--border-strong);
+  background: var(--paper-3);
+}
+
+.diorama .quest-list > button.active {
+  border-color: var(--terracotta);
+}
+
+.diorama .quest-list > button > b,
+.diorama .quest-zone,
+.diorama .market-list > a span b {
+  color: var(--terracotta);
+}
+
+.diorama .quest-list strong,
+.diorama .navigator-list strong,
+.diorama .skill-list strong {
+  font: 400 17px/1.15 var(--serif);
+  color: var(--ink);
+}
+
+.diorama .quest-list p,
+.diorama .quest-detail > p,
+.diorama .market-list > a p,
+.diorama .navigator-intro,
+.diorama .console-subject > small {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.diorama .quest-list small,
+.diorama .quest-list em,
+.diorama .navigator-list small,
+.diorama .navigator-list em,
+.diorama .skill-list small,
+.diorama .skill-list article > em,
+.diorama .market-list > a span small,
+.diorama .market-summary > span,
+.diorama .market-summary > small,
+.diorama .console-subject > span,
+.diorama .quest-detail dt,
+.diorama .console-proof-note,
+.diorama .console-empty span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.diorama .quest-detail h3,
+.diorama .console-subject > strong,
+.diorama .market-summary > strong,
+.diorama .console-empty strong {
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 400;
+}
+
+.diorama .quest-detail dd {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.diorama .quest-detail dl,
+.diorama .quest-detail dl > div {
+  border-color: var(--border);
+}
+
+.diorama .quest-detail pre {
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--paper-2);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.diorama .console-back {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.diorama .quest-actions button {
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--paper);
+  font: 500 13px/1 var(--sans);
+}
+
+.diorama .quest-actions button.primary {
+  border-color: var(--terracotta);
+  background: var(--terracotta);
+  color: #fff8f0;
+}
+
+.diorama .skill-icon {
+  border-color: var(--border);
+  background: var(--paper);
+}
+
+.diorama .skill-list i {
+  background: var(--border);
+}
+
+.diorama .console-proof-note {
+  border-top: 1px solid var(--border);
+}
+
+/* --------------------------------------------------------------------------
+   Broadcast card / record drawer (reused, restyled)
+   -------------------------------------------------------------------------- */
+
+.diorama .broadcast-card,
+.diorama .record-drawer {
+  bottom: 44px;
+  left: 20px;
+  width: 340px;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  color: var(--ink);
+  background: rgba(245, 239, 227, 0.96);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: none;
+}
+
+.diorama .console-open .broadcast-card,
+.diorama.console-open .broadcast-card {
+  display: none;
+}
+
+.diorama .broadcast-card::before {
+  display: none;
+}
+
+.diorama .broadcast-kicker span,
+.diorama .record-drawer .record-kicker,
+.diorama .record-identity small {
+  color: var(--muted);
+  font: 600 10px/1 var(--sans);
+  letter-spacing: 0.16em;
+}
+
+.diorama .broadcast-card h3,
+.diorama .record-identity strong,
+.diorama .record-drawer h3 {
+  color: var(--ink);
+  font: 400 22px/1.1 var(--serif);
+}
+
+.diorama .broadcast-card blockquote,
+.diorama .record-drawer > blockquote {
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.diorama .broadcast-card button,
+.diorama .record-drawer a,
+.diorama .record-drawer button {
+  color: var(--ink);
+}
+
+.diorama .close-record {
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+.diorama .record-drawer {
+  z-index: 30;
+}
+
+.diorama .record-identity span {
+  color: var(--terracotta);
+  font: 700 10px/1 var(--sans);
+  letter-spacing: 0.16em;
+}
+
+.diorama .record-identity small {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.diorama .record-drawer > p {
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.diorama .record-meta {
+  color: var(--muted);
+  font-size: 11px;
+  border-color: var(--border);
+}
+
+.diorama .record-drawer > a {
+  height: 38px;
+  border-radius: 8px;
+  color: var(--paper);
+  background: var(--ink);
+  font: 600 12px/1 var(--sans);
+  letter-spacing: 0.01em;
+  transition: background 140ms ease, transform 140ms ease;
+}
+
+.diorama .record-drawer > a:hover {
+  background: var(--terracotta);
+  transform: translateY(-1px);
+}
+
+.diorama[data-daypart="night"] .record-drawer > a {
+  background: var(--terracotta);
+}
+
+/* --------------------------------------------------------------------------
+   Footer strip
+   -------------------------------------------------------------------------- */
+
+.dt-footer {
+  position: absolute;
+  z-index: 15;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 22px;
+  border-top: 1px solid rgba(29, 35, 49, 0.1);
+  background: rgba(245, 239, 227, 0.86);
+  color: var(--muted);
+  font: 500 11px/1 var(--sans);
+  letter-spacing: 0.01em;
+}
+
+.diorama[data-daypart="night"] .dt-footer {
+  background: rgba(21, 27, 40, 0.9);
+  border-top-color: rgba(245, 239, 227, 0.08);
+  color: rgba(245, 239, 227, 0.55);
+}
+
+.dt-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Invitation dialog
+   -------------------------------------------------------------------------- */
+
+.dt-overlay {
+  position: absolute;
+  z-index: 45;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 84px 24px 60px;
+  background: rgba(29, 35, 49, 0.32);
+  backdrop-filter: blur(3px);
+  animation: dt-fade 160ms ease both;
+}
+
+@keyframes dt-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.dt-dialog {
+  width: 100%;
+  max-width: 580px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: dt-dialog-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes dt-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+.dt-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 16px 18px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dt-dialog-header > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.dt-dialog-header h2 {
+  margin: 0 0 6px;
+  font: 400 28px/1.1 var(--serif);
+  letter-spacing: -0.005em;
+}
+
+.dt-dialog-header p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.dt-dialog-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 22px;
+  display: grid;
+  gap: 22px;
+}
+
+.dt-dialog-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dt-dialog-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.dt-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.dt-section-head h3 {
+  margin: 0;
+  font: 400 17px/1.2 var(--serif);
+}
+
+.dt-section-head a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--terracotta);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.dt-section-head a:hover {
+  text-decoration: underline;
+}
+
+.dt-code {
+  position: relative;
+  padding: 12px 48px 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--paper-2);
+}
+
+.dt-code pre {
+  margin: 0;
+  color: var(--ink);
+  font: 400 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dt-code pre a {
+  color: var(--terracotta);
+  text-decoration: none;
+}
+
+.dt-code > .dt-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.dt-code > .dt-btn.copied {
+  border-color: var(--forest);
+  color: var(--forest);
+}
+
+.dt-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dt-stats > div {
+  padding: 12px 16px;
+  border-right: 1px solid var(--border);
+}
+
+.dt-stats > div:last-child {
+  border-right: 0;
+}
+
+.dt-stats strong {
+  display: block;
+  font: 400 26px/1 var(--serif);
+  font-variant-numeric: tabular-nums;
+}
+
+.dt-stats span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.dt-list {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dt-list > * {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dt-list > *:last-child {
+  border-bottom: 0;
+}
+
+.dt-list > *:hover {
+  background: var(--paper-2);
+}
+
+.dt-list-icon {
+  margin-top: 3px;
+  color: var(--terracotta);
+}
+
+.dt-list-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font: 400 17px/1.2 var(--serif);
+}
+
+.dt-list-title small {
+  color: var(--muted);
+  font: 500 11px/1 var(--sans);
+}
+
+.dt-list-desc {
+  margin: 3px 0 8px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.dt-list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dt-people {
+  display: grid;
+  gap: 2px;
+}
+
+.dt-people button {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  margin: 0 -10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.dt-people button:hover {
+  background: var(--paper-2);
+}
+
+.dt-people img {
+  width: 32px;
+  height: 32px;
+}
+
+.dt-people span {
+  min-width: 0;
+}
+
+.dt-people strong,
+.dt-people small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-people strong {
+  font: 600 13.5px/1.3 var(--sans);
+}
+
+.dt-people small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dt-people time {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.dt-dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--paper-2);
+}
+
+.dt-dialog-footer .spacer {
+  flex: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive — desktop first, then laptops, then small screens
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+  .dt-activity {
+    width: 280px;
+  }
+
+  .diorama .world-console {
+    width: 360px;
+  }
+}
+
+@media (max-width: 1120px) {
+  .dt-status-sub {
+    display: none;
+  }
+
+  .dt-districts small {
+    display: none;
+  }
+
+  .dt-districts strong {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 900px) {
+  .dt-header {
+    grid-template-columns: 1fr auto;
+  }
+
+  .dt-status {
+    display: none;
+  }
+
+  .dt-activity-cards {
+    display: none;
+  }
+
+  .dt-footer span:nth-child(2) {
+    display: none;
+  }
+
+  .diorama .broadcast-card,
+  .diorama .record-drawer {
+    width: 320px;
+  }
+}
+
+@media (max-width: 720px) {
+  .dt-header {
+    height: 56px;
+    padding: 0 14px;
+  }
+
+  .dt-brand-text small {
+    display: none;
+  }
+
+  .dt-header-actions .dt-btn .label {
+    display: none;
+  }
+
+  .dt-header-actions .dt-btn {
+    width: 34px;
+    padding: 0;
+  }
+
+  .dt-header-actions .dt-btn.tour {
+    display: none;
+  }
+
+  .dt-districts {
+    right: 8px;
+    left: 8px;
+    bottom: 34px;
+    transform: none;
+    justify-content: space-between;
+  }
+
+  .dt-districts button {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 6px 10px;
+  }
+
+  .dt-districts button > span {
+    display: none;
+  }
+
+  .dt-activity {
+    right: 10px;
+    width: calc(100vw - 20px);
+  }
+
+  .dt-drawer {
+    width: 100%;
+  }
+
+  .dt-footer span:last-child {
+    display: none;
+  }
+
+  .dt-footer {
+    padding: 0 12px;
+  }
+
+  .diorama .broadcast-card,
+  .diorama .record-drawer {
+    right: 10px;
+    bottom: 92px;
+    left: 10px;
+    width: auto;
+  }
+
+  .dt-overlay {
+    padding: 66px 8px 8px;
+    align-items: end;
+  }
+
+  .diorama .world-dock {
+    top: calc(var(--header-h) + 10px);
+    left: 10px;
+    right: auto;
+    width: fit-content;
+    display: flex;
+    flex-direction: row;
+    gap: 2px;
+  }
+
+  .diorama .world-dock button {
+    position: relative;
+    min-width: 54px;
+    min-height: 44px;
+    display: grid;
+    padding: 6px 4px 5px;
+  }
+
+  .diorama .world-dock button > span {
+    font-size: 8.5px;
+  }
+
+  .diorama .world-console {
+    top: calc(var(--header-h) + 64px);
+    right: 10px;
+    bottom: 96px;
+    left: 10px;
+    width: auto;
+    max-height: none;
+  }
+
+  .dt-activity {
+    top: calc(var(--header-h) + 10px);
+    width: auto;
+  }
+
+  .dt-activity-cards {
+    display: none;
+  }
+
+  .dt-drawer {
+    width: calc(100vw - 20px);
+  }
+
+  .dt-people {
+    display: none;
+  }
+
+  .dt-dialog-footer {
+    flex-wrap: wrap;
+  }
+}

@@ -490,7 +490,7 @@
 .lb-controls {
   position: absolute;
   right: 16px;
-  bottom: 18px;
+  bottom: 40px;
   display: grid;
   gap: 6px;
   z-index: 20;
@@ -515,7 +515,7 @@
 .lb-note {
   position: absolute;
   left: 16px;
-  bottom: 14px;
+  bottom: 38px;
   margin: 0;
   max-width: 320px;
   font: 500 10.5px/1.4 "DM Sans", ui-sans-serif, system-ui, sans-serif;
