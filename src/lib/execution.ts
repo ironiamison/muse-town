@@ -102,6 +102,11 @@ export type Executor = {
     clearance?: string;
   };
   source: "declaration" | "observed" | "service";
+  /** Public payout destination declared by a human executor; the requester pays it directly. */
+  payout?: { kind: string; handle: string } | null;
+  transport?: string;
+  languages?: string[];
+  availabilityNote?: string;
 };
 
 const taskStatusMap: Record<TaskState, ExecutionStatus> = {
@@ -345,6 +350,10 @@ export function humanExecutor(
       clearance: reputation.clearance,
     },
     source: "declaration",
+    payout: human.payout,
+    transport: human.transport || undefined,
+    languages: human.languages,
+    availabilityNote: human.availability || undefined,
   };
 }
 

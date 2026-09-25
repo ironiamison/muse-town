@@ -1,5 +1,5 @@
 import type { PortOpportunity, PortService } from "./economy.js";
-import type { PortTask } from "./port.js";
+import type { PortReward, PortTask } from "./port.js";
 
 export type RewardPolicy = {
   id: string;
@@ -79,10 +79,13 @@ export function deriveRewardSummary(
   opportunities: PortOpportunity[],
   services: PortService[],
   actorId?: string,
+  issuedRewards: PortReward[] = [],
+  issuanceActive = false,
 ): RewardSummary {
   const entries: ActivityLedgerEntry[] = [];
   const volume = new Map<string, number>();
   const earnings = new Map<string, number>();
+  const rewards = new Map<string, number>();
 
   tasks.forEach((task) => {
     const complete = task.state === "COMPLETE" || task.state === "SETTLED";
@@ -167,6 +170,25 @@ export function deriveRewardSummary(
     });
   });
 
+  issuedRewards.forEach((reward) => {
+    entries.push({
+      id: reward.ref,
+      kind: "reward",
+      event: "useful_activity_routed",
+      label: reward.note || `${reward.event} · ${reward.sourceRef}`,
+      actorId: reward.recipientId,
+      counterpartyId: reward.issuer.museId,
+      amount: reward.amount,
+      currency: reward.asset,
+      createdAt: reward.issuedAt,
+      sourceRef: reward.sourceRef,
+      finality: "policy_award",
+    });
+    if (!actorId || reward.recipientId === actorId) {
+      addAmount(rewards, reward.asset, reward.amount);
+    }
+  });
+
   return {
     networkActivity: {
       executions: entries.filter(
@@ -181,8 +203,9 @@ export function deriveRewardSummary(
       volume: [...volume].map(([currency, amount]) => ({ currency, amount })),
     },
     earnings: [...earnings].map(([currency, amount]) => ({ currency, amount })),
-    rewards: [],
-    rewardIssuanceActive: REWARD_POLICIES.some((policy) => policy.active),
+    rewards: [...rewards].map(([currency, amount]) => ({ currency, amount })),
+    rewardIssuanceActive:
+      issuanceActive || REWARD_POLICIES.some((policy) => policy.active),
     entries: entries.sort((a, b) => b.createdAt - a.createdAt),
   };
 }

@@ -213,7 +213,7 @@ export default function HomePage({
               <i><b /></i>
               <strong>Image service</strong>
               <span><Check /> Result · 1.2 sec</span>
-              <small>Illustrative flow · x402 not configured</small>
+              <small>Illustrative flow · live buyer requires explicit approval</small>
             </div>
           </article>
 

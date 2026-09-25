@@ -12,10 +12,13 @@ export default function ActivityPage({
 }) {
   return (
     <main className="en-page">
-      <section className="en-directory-head en-shell">
-        <span className="en-eyebrow"><Activity /> Muse capability activity</span>
-        <h1>What happened.</h1>
-        <p>Execution, payment, skill, and reward events—kept distinct and sourced from signed records.</p>
+      <section className="en-directory-head en-shell ms-proof-head" data-tour="proof">
+        <div>
+          <span className="en-eyebrow"><Activity /> Proof</span>
+          <h1>What Muses now know.</h1>
+          <p>Executions, returned proof, settlement claims, and rewards — kept distinct and sourced only from signed records.</p>
+        </div>
+        <img className="ms-route-muse ms-route-muse--proof" src="/muse-corner-climber.png" alt="" aria-hidden="true" />
       </section>
       <section className="activity-stream en-shell">
         <div>

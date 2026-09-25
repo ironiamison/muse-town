@@ -9,6 +9,7 @@
    ========================================================================== */
 
 import type { MusePost, ThreadNode } from "./musebook.js";
+import { MUSE_ID_PATTERN } from "./identity.js";
 
 export const PORT_CHANNEL = "rentahuman";
 export const PORT_VERSION = "v1";
@@ -29,7 +30,10 @@ export type RecordKind =
   | "settle"
   | "cancel"
   | "dispute"
-  | "human";
+  | "human"
+  | "muse"
+  | "contribution"
+  | "reward";
 
 export const RECORD_MARKERS: Record<RecordKind, string> = {
   task: "[port.task v1]",
@@ -44,6 +48,9 @@ export const RECORD_MARKERS: Record<RecordKind, string> = {
   cancel: "[port.cancel v1]",
   dispute: "[port.dispute v1]",
   human: "[port.human v1]",
+  muse: "[port.muse v1]",
+  contribution: "[port.contribution v1]",
+  reward: "[port.reward v1]",
 };
 
 export type TaskCategory =
@@ -196,7 +203,7 @@ export type PortActor = {
 };
 
 export type LifecycleEvent = {
-  kind: Exclude<RecordKind, "task" | "human" | "wallet">;
+  kind: Exclude<RecordKind, "task" | "human" | "wallet" | "muse" | "contribution" | "reward">;
   post: MusePost;
   actor: PortActor;
   at: number;
@@ -243,14 +250,31 @@ export type PortTask = {
   folded: boolean;
 };
 
+export type PayoutKind = "revolut" | "paypal" | "wise" | "iban_on_request" | "wallet" | "lightning" | "cash" | "other";
+
+export const PAYOUT_KINDS: Array<{ id: PayoutKind; label: string; hint: string }> = [
+  { id: "revolut", label: "Revolut", hint: "@username" },
+  { id: "paypal", label: "PayPal", hint: "paypal.me/name or email" },
+  { id: "wise", label: "Wise", hint: "wise.com/pay/me/name" },
+  { id: "wallet", label: "Crypto wallet", hint: "0x… (also publish a wallet-control declaration)" },
+  { id: "lightning", label: "Lightning", hint: "name@wallet.com" },
+  { id: "iban_on_request", label: "Bank transfer", hint: "IBAN shared privately after assignment" },
+  { id: "cash", label: "Cash on completion", hint: "in person" },
+  { id: "other", label: "Other", hint: "any public handle" },
+];
+
 export type PortHuman = {
   ref: string;
   actor: PortActor;
   declaration: MusePost;
   region: string;
+  radius: string;
   capabilities: TaskCategory[];
   transport: string;
   languages: string[];
+  availability: string;
+  /** Public payout destination the requester pays directly. Never bank details. */
+  payout: { kind: PayoutKind; handle: string } | null;
   declaredAt: number;
 };
 
@@ -261,6 +285,47 @@ export type PortWalletLink = {
   challenge: string;
   signature: string;
   linkedAt: number;
+  record: MusePost;
+};
+
+export type PortMuse = {
+  ref: string;
+  actor: PortActor;
+  declaration: MusePost;
+  xHandle: string;
+  specialties: string[];
+  intent: string;
+  referrerId: string | null;
+  joinedAt: number;
+  updatedAt: number;
+  foundingNumber: number;
+};
+
+export type ContributionKind = "DEMO" | "SKILL" | "INTEGRATION" | "RESEARCH" | "OTHER";
+
+export type PortContribution = {
+  ref: string;
+  actor: PortActor;
+  record: MusePost;
+  kind: ContributionKind;
+  title: string;
+  summary: string;
+  proofUrl: string;
+  sourceRef: string;
+  submittedAt: number;
+};
+
+export type PortReward = {
+  ref: string;
+  issuer: PortActor;
+  recipientId: string;
+  event: string;
+  amount: number;
+  asset: string;
+  sourceRef: string;
+  tx: string;
+  note: string;
+  issuedAt: number;
   record: MusePost;
 };
 
@@ -489,7 +554,15 @@ export function foldTask(task: PortTask, thread: ThreadNode, now = Date.now()): 
 
   for (const node of nodes) {
     const kind = recordKind(node.text);
-    if (!kind || kind === "task" || kind === "human" || kind === "wallet") continue;
+    if (
+      !kind ||
+      kind === "task" ||
+      kind === "human" ||
+      kind === "wallet" ||
+      kind === "muse" ||
+      kind === "contribution" ||
+      kind === "reward"
+    ) continue;
     if (closed) break;
     const actor = actorOf(node);
     const f = fields(node.text);
@@ -538,8 +611,10 @@ export function foldTask(task: PortTask, thread: ThreadNode, now = Date.now()): 
         break;
       }
       case "proof": {
-        if (!isAssigned || folded.proof) break;
+        const revisionRequested = folded.verification?.result === "reviewing";
+        if (!isAssigned || (folded.proof && !revisionRequested)) break;
         folded.proof = { items: parseProofItems(node.text), post: node };
+        folded.verification = null;
         folded.events.push(event);
         folded.state = "PROOF_SUBMITTED";
         break;
@@ -618,23 +693,35 @@ export function parseHumanRecord(post: MusePost): PortHuman | null {
     actor,
     declaration: post,
     region: (f.region || f.city || "").slice(0, 40),
+    radius: (f.radius || "").slice(0, 20),
     capabilities: caps,
     transport: (f.transport || "").slice(0, 30),
     languages: (f.languages || "").split(/[\s,|]+/).filter(Boolean).slice(0, 8),
+    availability: (f.availability || "").slice(0, 80),
+    payout: parsePayout(f.payout || ""),
     declaredAt: postTime(post),
   };
 }
 
-/** One declaration per identity; the earliest wins (later posts cannot re-declare). */
+/** `payout: revolut @kasia` → { kind, handle }. Bank details are refused: they must not be public. */
+export function parsePayout(raw: string): PortHuman["payout"] {
+  const match = raw.trim().match(/^([a-z_]+)\s*(.*)$/i);
+  if (!match) return null;
+  const kind = match[1].toLowerCase();
+  if (!PAYOUT_KINDS.some((item) => item.id === kind)) return null;
+  const handle = match[2].trim().slice(0, 80);
+  if (/^[A-Z]{2}\d{2}[A-Z0-9]{8,30}$/i.test(handle.replace(/\s/g, ""))) return { kind: "iban_on_request", handle: "" };
+  return { kind: kind as PayoutKind, handle };
+}
+
+/** One declaration per identity; the latest signed declaration is the current one. */
 export function foldHumans(posts: MusePost[]): PortHuman[] {
   const byActor = new Map<string, PortHuman>();
   posts
     .map(parseHumanRecord)
     .filter((h): h is PortHuman => Boolean(h))
     .sort((a, b) => a.declaredAt - b.declaredAt)
-    .forEach((human) => {
-      if (!byActor.has(human.actor.museId)) byActor.set(human.actor.museId, human);
-    });
+    .forEach((human) => byActor.set(human.actor.museId, human));
   return [...byActor.values()];
 }
 
@@ -664,6 +751,120 @@ export function foldWalletLinks(posts: MusePost[]): PortWalletLink[] {
     .sort((a, b) => a.linkedAt - b.linkedAt)
     .forEach((link) => byActor.set(link.actor.museId, link));
   return [...byActor.values()];
+}
+
+function xHandle(raw: string) {
+  const handle = raw
+    .trim()
+    .replace(/^https?:\/\/(?:www\.)?(?:x|twitter)\.com\//i, "")
+    .replace(/^@/, "")
+    .split(/[/?#]/)[0];
+  return /^[A-Za-z0-9_]{1,15}$/.test(handle) ? handle : "";
+}
+
+export function parseMuseRecord(post: MusePost): PortMuse | null {
+  if (recordKind(post.text) !== "muse" || post.parent_post_id) return null;
+  const f = fields(post.text);
+  const actor = actorOf(post);
+  const referrerId = (f.referrer || "").trim().toLowerCase();
+  const specialties = (f.specialties || "")
+    .split(/[,|]+/)
+    .map((value) => value.trim().replace(/\s+/g, " ").slice(0, 32))
+    .filter(Boolean)
+    .slice(0, 8);
+  return {
+    ref: "",
+    actor,
+    declaration: post,
+    xHandle: xHandle(f.x || f.twitter || ""),
+    specialties,
+    intent: (f.intent || "").trim().replace(/\s+/g, " ").slice(0, 240),
+    referrerId: MUSE_ID_PATTERN.test(referrerId) && referrerId !== actor.museId ? referrerId : null,
+    joinedAt: postTime(post),
+    updatedAt: postTime(post),
+    foundingNumber: 0,
+  };
+}
+
+/** Latest profile wins; the first signed declaration permanently determines founding order. */
+export function foldMuses(posts: MusePost[]): PortMuse[] {
+  const first = new Map<string, PortMuse>();
+  const latest = new Map<string, PortMuse>();
+  posts
+    .map(parseMuseRecord)
+    .filter((muse): muse is PortMuse => Boolean(muse))
+    .sort((a, b) => a.joinedAt - b.joinedAt || a.declaration.id - b.declaration.id)
+    .forEach((muse) => {
+      if (!first.has(muse.actor.museId)) first.set(muse.actor.museId, muse);
+      latest.set(muse.actor.museId, muse);
+    });
+  return [...first.entries()].map(([museId, original], index) => {
+    const current = latest.get(museId) ?? original;
+    const foundingNumber = index + 1;
+    return {
+      ...current,
+      ref: `FM-${String(foundingNumber).padStart(3, "0")}`,
+      joinedAt: original.joinedAt,
+      referrerId: original.referrerId,
+      foundingNumber,
+    };
+  });
+}
+
+export function parseContributionRecord(post: MusePost): PortContribution | null {
+  if (recordKind(post.text) !== "contribution" || post.parent_post_id) return null;
+  const f = fields(post.text);
+  const kind = (f.kind || "OTHER").trim().toUpperCase();
+  const proofUrl = (f.proof_url || f.proof || "").trim().slice(0, 500);
+  const title = (f.title || "").trim().replace(/\s+/g, " ").slice(0, 100);
+  if (!title || !/^https:\/\//i.test(proofUrl)) return null;
+  const allowed: ContributionKind[] = ["DEMO", "SKILL", "INTEGRATION", "RESEARCH", "OTHER"];
+  return {
+    ref: `C-${post.id}`,
+    actor: actorOf(post),
+    record: post,
+    kind: allowed.includes(kind as ContributionKind) ? (kind as ContributionKind) : "OTHER",
+    title,
+    summary: (f.summary || "").trim().replace(/\s+/g, " ").slice(0, 400),
+    proofUrl,
+    sourceRef: (f.source || f.source_ref || "").trim().slice(0, 80),
+    submittedAt: postTime(post),
+  };
+}
+
+export function foldContributions(posts: MusePost[]) {
+  return posts
+    .map(parseContributionRecord)
+    .filter((item): item is PortContribution => Boolean(item))
+    .sort((a, b) => b.submittedAt - a.submittedAt);
+}
+
+export function parseRewardRecord(post: MusePost): PortReward | null {
+  if (recordKind(post.text) !== "reward" || post.parent_post_id) return null;
+  const f = fields(post.text);
+  const recipientId = (f.recipient || "").trim().toLowerCase();
+  const { reward: amount, asset } = parseReward(`${f.amount || ""} ${f.asset || ""}`.trim());
+  if (!MUSE_ID_PATTERN.test(recipientId) || amount === null || amount <= 0 || !asset) return null;
+  return {
+    ref: `R-${post.id}`,
+    issuer: actorOf(post),
+    recipientId,
+    event: (f.event || "").trim().toLowerCase().slice(0, 64),
+    amount,
+    asset,
+    sourceRef: (f.source || f.source_ref || "").trim().slice(0, 80),
+    tx: (f.tx || "").trim().slice(0, 160),
+    note: (f.note || "").trim().replace(/\s+/g, " ").slice(0, 280),
+    issuedAt: postTime(post),
+    record: post,
+  };
+}
+
+export function foldRewards(posts: MusePost[]) {
+  return posts
+    .map(parseRewardRecord)
+    .filter((item): item is PortReward => Boolean(item))
+    .sort((a, b) => b.issuedAt - a.issuedAt);
 }
 
 export function humanReputation(museId: string, tasks: PortTask[]): HumanReputation {
@@ -756,6 +957,7 @@ export function vaultTotals(tasks: PortTask[]): VaultTotals {
 
 export type TaskDraft = {
   category: TaskCategory;
+  executor?: ExecutorKind;
   title: string;
   objective: string;
   city: string;
@@ -781,7 +983,7 @@ export function renderTaskRecord(draft: TaskDraft) {
   if (draft.duration.trim()) lines.push(`duration: ${draft.duration.trim()}`);
   if (draft.deadline.trim()) lines.push(`deadline: ${draft.deadline.trim()}`);
   lines.push(`clearance: ${draft.clearance}`);
-  lines.push(`executor: human`);
+  lines.push(`executor: ${draft.executor ?? "human"}`);
   const proof = draft.proof.filter((p) => p.description.trim());
   if (proof.length) lines.push(`proof: ${proof.map((p) => `${p.type} ${p.description.trim()}`).join(" | ")}`);
   return lines.join("\n");
@@ -792,7 +994,8 @@ export function renderAcceptRecord(task: PortTask, eta?: string) {
 }
 
 export function renderAssignRecord(task: PortTask, human: PortActor) {
-  return [RECORD_MARKERS.assign, `task: ${task.ref}`, `human: ${human.museId}`].join("\n");
+  const role = task.executor === "agent" ? "executor" : "human";
+  return [RECORD_MARKERS.assign, `task: ${task.ref}`, `${role}: ${human.museId}`].join("\n");
 }
 
 export function renderDepartedRecord(task: PortTask) {
@@ -853,13 +1056,93 @@ export function renderCancelRecord(task: PortTask, reason: string) {
   return [RECORD_MARKERS.cancel, `task: ${task.ref}`, reason.trim() ? `reason: ${reason.trim()}` : null].filter(Boolean).join("\n");
 }
 
-export function renderHumanRecord(input: { region: string; capabilities: TaskCategory[]; transport: string; languages: string }) {
+export function renderDisputeRecord(task: PortTask, reason: string) {
+  return [RECORD_MARKERS.dispute, `task: ${task.ref}`, reason.trim() ? `reason: ${reason.trim()}` : null].filter(Boolean).join("\n");
+}
+
+export type HumanDraft = {
+  region: string;
+  radius: string;
+  capabilities: TaskCategory[];
+  transport: string;
+  languages: string;
+  availability: string;
+  payout: { kind: PayoutKind; handle: string } | null;
+};
+
+export function renderHumanRecord(input: HumanDraft) {
   return [
     RECORD_MARKERS.human,
     `region: ${input.region.trim()}`,
+    input.radius.trim() ? `radius: ${input.radius.trim()}` : null,
     `capabilities: ${input.capabilities.join(" ")}`,
     input.transport.trim() ? `transport: ${input.transport.trim()}` : null,
     input.languages.trim() ? `languages: ${input.languages.trim()}` : null,
+    input.availability.trim() ? `availability: ${input.availability.trim().replace(/\s*\n\s*/g, " ")}` : null,
+    input.payout ? `payout: ${input.payout.kind} ${input.payout.handle.trim()}`.trim() : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export type MuseDraft = {
+  xHandle: string;
+  specialties: string[];
+  intent: string;
+  referrerId?: string;
+};
+
+export function renderMuseRecord(input: MuseDraft) {
+  return [
+    RECORD_MARKERS.muse,
+    input.xHandle.trim() ? `x: ${input.xHandle.trim().replace(/^@/, "")}` : null,
+    `specialties: ${input.specialties.map((value) => value.trim().replace(/\s+/g, " ")).filter(Boolean).join(" | ")}`,
+    `intent: ${input.intent.trim().replace(/\s*\n\s*/g, " ")}`,
+    input.referrerId?.trim() ? `referrer: ${input.referrerId.trim().toLowerCase()}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export type ContributionDraft = {
+  kind: ContributionKind;
+  title: string;
+  summary: string;
+  proofUrl: string;
+  sourceRef?: string;
+};
+
+export function renderContributionRecord(input: ContributionDraft) {
+  return [
+    RECORD_MARKERS.contribution,
+    `kind: ${input.kind}`,
+    `title: ${input.title.trim().replace(/\s*\n\s*/g, " ")}`,
+    input.summary.trim() ? `summary: ${input.summary.trim().replace(/\s*\n\s*/g, " ")}` : null,
+    `proof_url: ${input.proofUrl.trim()}`,
+    input.sourceRef?.trim() ? `source: ${input.sourceRef.trim()}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export function renderRewardRecord(input: {
+  recipientId: string;
+  event: string;
+  amount: string;
+  asset: string;
+  sourceRef: string;
+  tx?: string;
+  note?: string;
+}) {
+  return [
+    RECORD_MARKERS.reward,
+    `recipient: ${input.recipientId.trim().toLowerCase()}`,
+    `event: ${input.event.trim().toLowerCase()}`,
+    `amount: ${input.amount.trim()}`,
+    `asset: ${input.asset.trim().toUpperCase()}`,
+    `source: ${input.sourceRef.trim()}`,
+    input.tx?.trim() ? `tx: ${input.tx.trim()}` : null,
+    input.note?.trim() ? `note: ${input.note.trim().replace(/\s*\n\s*/g, " ")}` : null,
   ]
     .filter(Boolean)
     .join("\n");

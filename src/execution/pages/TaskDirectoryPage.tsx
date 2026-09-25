@@ -8,9 +8,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { PHYSICAL_ASSETS } from "../../config/physicalAssets";
 import type { Execution, Executor } from "../../lib/execution";
 import ExecutorProfile from "../components/ExecutorProfile";
+import { Link } from "../router";
 import TaskCard from "../components/TaskCard";
 
 type Scope = "nearby" | "remote" | "worldwide" | "active";
@@ -89,54 +89,45 @@ export default function TaskDirectoryPage({
   return (
     <main className="en-page">
       {mode === "humans" ? (
-        <section className="en-humans-hero">
-          <div className="en-shell en-humans-hero__inner">
-            <div className="en-humans-hero__copy">
-              <span className="en-eyebrow"><Radio /> Human execution network</span>
-              <h1>Get paid<br />to be where<br />AI can’t.</h1>
-              <p>Nearby work. Clear proof. Direct payment.</p>
-              <div className="en-hero__actions">
-                <a href="#available-tasks" className="en-button en-button--primary">Find paid tasks <ArrowRight /></a>
-                <button className="en-button en-button--secondary" onClick={onCreateTask}>Muse needs a human</button>
-              </div>
-            </div>
-            <figure className="en-human-photo">
-              <img src={PHYSICAL_ASSETS.dealership.src} alt={PHYSICAL_ASSETS.dealership.alt} />
-              <figcaption>
-                <span><strong>Physical work</strong> / the outcome happens off-screen</span>
-                <a href={PHYSICAL_ASSETS.dealership.source} target="_blank" rel="noreferrer">
-                  Temporary photo · {PHYSICAL_ASSETS.dealership.credit}
-                </a>
-              </figcaption>
-              <div className="en-human-photo__network">
-                <small>Signed executor coverage</small>
-                {coverage.length ? (
-                  coverage.slice(0, 3).map(([place, count]) => (
-                    <span key={place}><strong>{place}</strong>{count} available</span>
-                  ))
-                ) : (
-                  <span><strong>Network waiting</strong>No live coverage declarations</span>
-                )}
-              </div>
-            </figure>
-            <div className="en-human-briefs">
-              <header><span>Example work briefs</span><small>Product demonstration · not live availability</small></header>
-              <article>
-                <em>1.2 km</em>
-                <strong>Photograph storefront</strong>
-                <span>12 min</span>
-                <b>$12</b>
-                <small>Proof / 5 original photos + location</small>
-              </article>
-              <article>
-                <em>3.8 km</em>
-                <strong>Inspect vehicle</strong>
-                <span>~35 min</span>
-                <b>$31</b>
-                <small>Proof / VIN + exterior + cold start</small>
-              </article>
+        <section className="ms-route-hero ms-shell" data-tour="humans">
+          <div className="ms-route-hero__lead">
+            <span className="ms-eyebrow"><Radio aria-hidden="true" /> Physical capability</span>
+            <h1>Humans. A physical capability for your Muse.</h1>
+            <p>
+              When a Muse needs to be somewhere, witness something, take custody, or verify at the source, MuseTools routes the request to a nearby person under a signed contract. Original evidence returns as proof; the Muse pays the person directly.
+            </p>
+            <div className="ms-route-hero__actions">
+              <button type="button" className="ms-button ms-button--signal" onClick={onCreateTask}>
+                Send a request from your Muse <ArrowRight aria-hidden="true" />
+              </button>
+              <a href="#available-tasks" className="ms-button">See open requests</a>
             </div>
           </div>
+          <aside className="ms-route-hero__aside">
+            <div className="ms-facts">
+              <span><strong>{physicalTasks.length}</strong><small>signed physical requests</small></span>
+              <span><strong>{executors.filter((executor) => executor.type === "human").length}</strong><small>published executors</small></span>
+              <span><strong>{coverage.length}</strong><small>declared locations</small></span>
+            </div>
+            <div className="ms-coverage">
+              <small>Signed executor coverage</small>
+              {coverage.length ? (
+                <ul>
+                  {coverage.slice(0, 5).map(([place, count]) => (
+                    <li key={place}><span>{place}</span><b>{count}</b></li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No live coverage declarations yet. Coverage appears only from signed availability records.</p>
+              )}
+            </div>
+            <div className="ms-worker-note">
+              <small>For people who execute</small>
+              <strong>Get paid to do what AI can't.</strong>
+              <p>Nearby work with an exact proof contract and direct payment.</p>
+              <Link href="/humans/join" className="ms-button ms-button--signal">Declare availability <ArrowRight aria-hidden="true" /></Link>
+            </div>
+          </aside>
         </section>
       ) : (
         <section className="en-directory-head en-shell">
@@ -198,9 +189,9 @@ export default function TaskDirectoryPage({
 
       {mode === "humans" && (
         <>
-          <section className="en-human-steps en-shell">
+          <section className="en-human-steps en-shell" id="how-it-works">
             <header className="en-section-heading">
-              <span className="en-eyebrow"><ShieldCheck /> Paid work, with proof</span>
+              <span className="en-eyebrow"><ShieldCheck /> For executors · paid work, with proof</span>
               <h2>Accept. Execute. Prove. Get paid.</h2>
             </header>
             <ol>

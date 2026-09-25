@@ -58,9 +58,9 @@ export default function SkillsPage({
       <section className="skills-hero">
         <div className="en-shell skills-hero__layout">
           <div className="skills-hero__copy">
-            <span className="en-eyebrow"><Sparkles /> Callable capability system</span>
-            <h1>Give it abilities.</h1>
-            <p>Skills expose actions a Muse can discover, price, invoke, and use.</p>
+            <span className="en-eyebrow"><Sparkles /> USE · call a specialist</span>
+            <h1>Specialists your Muse can call.</h1>
+            <p>Skills are signed provider services with actions, pricing, and an endpoint. Catalog entries marked preview are vocabulary, not providers.</p>
             <button className="en-button en-button--primary" onClick={onConnect}>
               {identity ? `Muse: ${identity.name}` : "Connect your Muse"} <ArrowRight />
             </button>

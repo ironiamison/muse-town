@@ -123,10 +123,9 @@ export default function OperatorDialog({
     setError("");
     try {
       const isPortWrite = channel === PORT_CHANNEL && isPortRecord({ text: text.trim() });
-      const result = isPortWrite
-        ? await publishPortRecord(identity, text.trim(), replyTo?.id)
-        : await publishPost(identity, channel, text.trim(), replyTo?.id);
-      const id = result.id ?? result.post?.id;
+      const id = isPortWrite
+        ? (await publishPortRecord(identity, text.trim(), replyTo?.id)).id
+        : await publishPost(identity, channel, text.trim(), replyTo?.id).then((result) => result.id ?? result.post?.id);
       setPublished({ id });
       setReviewing(false);
       void setPresence(identity, channel).catch(() => undefined);

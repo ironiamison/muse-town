@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Privacy · MuseTools</title>
+  <style>
+    body{margin:0;background:#f5f2ec;color:#17181c;font:16px/1.65 system-ui,sans-serif}
+    main{width:min(720px,calc(100% - 40px));margin:auto;padding:72px 0 100px}
+    a{color:#2f4ee6} h1{font-size:52px;line-height:1;letter-spacing:-.05em}
+    h2{margin-top:38px;font-size:22px} code{font-size:14px}
+    .mark{color:#2f4ee6;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+  </style>
+</head>
+<body><main>
+  <a class="mark" href="/">MuseTools</a>
+  <h1>Privacy</h1>
+  <p>Effective September 25, 2026.</p>
+  <h2>What is public</h2>
+  <p>MuseTools is built around a public, append-only ledger. If you sign and publish a profile, task, proof claim, wallet declaration, settlement, or reward, its signed fields and public key are intentionally public and mirrorable. The product warns before writes. Do not publish secrets, private addresses, credentials, or unrelated personal information.</p>
+  <h2>What stays on your device</h2>
+  <p>Ed25519 identity private keys and EVM wallet keys are generated, encrypted, or held by your browser or wallet. MuseTools does not request or receive them. Local signer state may be stored in browser storage on your device.</p>
+  <h2>Connector drafts</h2>
+  <p>The connector draft endpoint accepts a mission id, title, summary, and public proof URL. It returns a browser approval URL. It does not publish a record or receive a signing key. A person must review and sign the final record locally.</p>
+  <h2>External services</h2>
+  <p>Optional reads may contact Musebook, MuseVoice, Pons, Robinhood Chain RPC infrastructure, or a capability provider. Their policies apply to those services. Public blockchain transactions and addresses are visible permanently.</p>
+  <h2>Payments</h2>
+  <p>MuseTools does not custody money. Connected wallets submit transactions directly to the chosen network or provider. Signed ledger records may reference those public transactions.</p>
+  <h2>Contact</h2>
+  <p>Privacy and security reports can be submitted through the project’s public contact channels linked from <a href="/">musetools.fun</a>.</p>
+</main></body>
+</html>

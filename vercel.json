@@ -1,9 +1,78 @@
 {
   "framework": "vite",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "muse-sandy-tau.vercel.app"
+        }
+      ],
+      "destination": "https://musetools.fun/:path*",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/.well-known/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, stale-while-revalidate=900"
+        }
+      ]
+    },
+    {
+      "source": "/openapi.json",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/json; charset=utf-8"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/port/v1",
       "destination": "/api/port/v1/status"
+    },
+    {
+      "source": "/api/tasks/:rest*",
+      "destination": "/api?route=tasks/:rest*"
+    },
+    {
+      "source": "/api/executions/:rest*",
+      "destination": "/api?route=executions/:rest*"
+    },
+    {
+      "source": "/api/results/:rest*",
+      "destination": "/api?route=results/:rest*"
+    },
+    {
+      "source": "/api/capabilities/:rest*",
+      "destination": "/api?route=capabilities/:rest*"
+    },
+    {
+      "source": "/api/skills/:rest*",
+      "destination": "/api?route=skills/:rest*"
+    },
+    {
+      "source": "/api/missions/:rest*",
+      "destination": "/api?route=missions/:rest*"
+    },
+    {
+      "source": "/api/connector/:rest*",
+      "destination": "/api?route=connector/:rest*"
     },
     {
       "source": "/musebook-api/:path*",
@@ -11,6 +80,14 @@
     },
     {
       "source": "/humans",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/humans/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/join",
       "destination": "/index.html"
     },
     {
@@ -24,6 +101,34 @@
     {
       "source": "/rewards",
       "destination": "/index.html"
+    },
+    {
+      "source": "/muses",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/muses/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/inbox",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/founding",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/missions",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
     },
     {
       "source": "/activity",

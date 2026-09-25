@@ -435,3 +435,168 @@ export function hasVault() {
 export function clearVault() {
   localStorage.removeItem(VAULT_KEY);
 }
+
+/* ------------------------------------------------------------------ */
+/* Portable encrypted vault                                             */
+/* ------------------------------------------------------------------ */
+
+export const VAULT_EXPORT_FORMAT = "musetools.vault";
+export const VAULT_EXPORT_VERSION = 1;
+
+export type VaultExport = {
+  format: typeof VAULT_EXPORT_FORMAT;
+  version: typeof VAULT_EXPORT_VERSION;
+  exported_at: string;
+  muse_id: string;
+  name: string;
+  public_key: string;
+  cipher: "AES-GCM";
+  kdf: { name: "PBKDF2"; hash: "SHA-256"; iterations: number };
+  salt: string;
+  iv: string;
+  data: string;
+};
+
+/**
+ * Produce a portable encrypted copy of the vault. The private key is encrypted
+ * with a password chosen at export time; only public identifiers are readable
+ * without it. The plaintext JWK never leaves this function unencrypted.
+ */
+export async function exportVault(identity: MuseIdentity, password: string): Promise<VaultExport> {
+  if (password.length < 8) throw new Error("Use at least 8 characters to protect the export.");
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveVaultKey(password, salt);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    encoder.encode(JSON.stringify(identity)),
+  );
+  return {
+    format: VAULT_EXPORT_FORMAT,
+    version: VAULT_EXPORT_VERSION,
+    exported_at: new Date().toISOString(),
+    muse_id: identity.museId,
+    name: identity.name,
+    public_key: identity.publicKey,
+    cipher: "AES-GCM",
+    kdf: { name: "PBKDF2", hash: "SHA-256", iterations: 310_000 },
+    salt: toBase64Url(salt),
+    iv: toBase64Url(iv),
+    data: toBase64Url(new Uint8Array(encrypted)),
+  };
+}
+
+export function parseVaultExport(raw: string): VaultExport {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("That file is not a MuseTools vault export.");
+  }
+  const candidate = parsed as Partial<VaultExport> | null;
+  if (
+    !candidate ||
+    candidate.format !== VAULT_EXPORT_FORMAT ||
+    candidate.version !== VAULT_EXPORT_VERSION ||
+    typeof candidate.salt !== "string" ||
+    typeof candidate.iv !== "string" ||
+    typeof candidate.data !== "string" ||
+    typeof candidate.muse_id !== "string" ||
+    typeof candidate.public_key !== "string"
+  ) {
+    throw new Error("That file is not a valid MuseTools vault export.");
+  }
+  return candidate as VaultExport;
+}
+
+/** Decrypt an exported vault. Does not write to local storage. */
+export async function decryptVaultExport(file: VaultExport, password: string): Promise<MuseIdentity> {
+  try {
+    const key = await deriveVaultKey(password, fromBase64Url(file.salt));
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: fromBase64Url(file.iv) },
+      key,
+      fromBase64Url(file.data),
+    );
+    const identity = JSON.parse(new TextDecoder().decode(decrypted)) as MuseIdentity;
+    if (
+      !identity.privateJwk?.d ||
+      !identity.privateJwk?.x ||
+      identity.privateJwk.x !== identity.publicKey ||
+      identity.publicKey !== file.public_key ||
+      identity.museId !== file.muse_id
+    ) {
+      throw new Error("integrity");
+    }
+    return identity;
+  } catch {
+    throw new Error("The export password is incorrect or the file was altered.");
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Public Muse lookup (read-only personalization)                       */
+/* ------------------------------------------------------------------ */
+
+export type PublicMuse = {
+  museId: string;
+  name: string;
+  avatarUrl?: string;
+  bio?: string;
+  founder?: boolean;
+  publicKey?: string;
+  profileUrl: string;
+};
+
+/** Accepts a Muse id or any Musebook profile URL and returns the id. */
+export function parseMuseReference(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  const direct = trimmed.match(/^(muse_[a-z0-9]{6,})$/i);
+  if (direct) return direct[1].toLowerCase();
+  try {
+    const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+    const fromPath = url.pathname.match(/(muse_[a-z0-9]{6,})/i);
+    if (fromPath) return fromPath[1].toLowerCase();
+    const fromQuery = url.searchParams.get("muse_id");
+    if (fromQuery && /^muse_[a-z0-9]{6,}$/i.test(fromQuery)) return fromQuery.toLowerCase();
+  } catch {
+    /* not a URL */
+  }
+  return null;
+}
+
+export async function getPublicMuse(museId: string): Promise<PublicMuse | null> {
+  const profileUrl = `https://musebook.lol/muse/${encodeURIComponent(museId)}`;
+  const directory = await getMuses().catch(() => [] as MuseResident[]);
+  const resident = directory.find((item) => item.muse_id?.toLowerCase() === museId.toLowerCase());
+  if (resident) {
+    return {
+      museId: resident.muse_id,
+      name: resident.name,
+      avatarUrl: resolveMuseMedia(resident.avatar_url) || undefined,
+      bio: resident.bio,
+      founder: resident.founder,
+      publicKey: resident.public_key,
+      profileUrl,
+    };
+  }
+  try {
+    const record = await getIdentity(museId);
+    const source = (record.muse && typeof record.muse === "object" ? record.muse : record) as Record<string, unknown>;
+    const id = typeof source.muse_id === "string" ? source.muse_id : museId;
+    const name = typeof source.name === "string" ? source.name : "";
+    if (!name) return null;
+    return {
+      museId: id,
+      name,
+      avatarUrl: typeof source.avatar_url === "string" ? resolveMuseMedia(source.avatar_url) || undefined : undefined,
+      bio: typeof source.bio === "string" ? source.bio : undefined,
+      publicKey: typeof source.public_key === "string" ? source.public_key : undefined,
+      profileUrl,
+    };
+  } catch {
+    return null;
+  }
+}

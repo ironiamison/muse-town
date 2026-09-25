@@ -45,7 +45,7 @@ export default function LiveExecution({
             <strong>{loading ? "Reading the network" : "No public execution is active"}</strong>
             <p>
               {offline
-                ? "Musebook could not be reached. No activity has been invented."
+                ? "The ledger could not be reached. No activity has been invented."
                 : "This panel fills only when a signed task exists. The network is ready for the first request."}
             </p>
           </div>

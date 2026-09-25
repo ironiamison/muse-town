@@ -1,3 +1,12 @@
+import { encodeFunctionData, getAddress, parseAbi, parseEther, parseUnits, toHex } from "viem";
+
+const ponsEscrowAbi = parseAbi([
+  "function claimToken(address token) returns (uint256 amount)",
+]);
+const erc20Abi = parseAbi([
+  "function transfer(address to, uint256 amount) returns (bool)",
+]);
+
 export type WalletSession = {
   address: string;
   chainId: string;
@@ -61,7 +70,7 @@ export function walletChallenge(input: {
   nonce: string;
 }) {
   return [
-    "PORT HUMAN WALLET LINK",
+    "MUSETOOLS PAYMENT WALLET LINK",
     "version=1",
     `port_id=${input.portId}`,
     `muse_id=${input.museId}`,
@@ -96,6 +105,116 @@ export async function signWalletChallenge(address: string, challenge: string) {
       }),
     );
   }
+}
+
+export async function switchToRobinhoodChain() {
+  const wallet = provider();
+  try {
+    await wallet.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: "0x1237" }],
+    });
+  } catch (error) {
+    const code =
+      typeof error === "object" && error && "code" in error
+        ? Number((error as { code: unknown }).code)
+        : 0;
+    if (code !== 4902) throw error;
+    await wallet.request({
+      method: "wallet_addEthereumChain",
+      params: [{
+        chainId: "0x1237",
+        chainName: "Robinhood Chain",
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+        rpcUrls: ["https://rpc.mainnet.chain.robinhood.com"],
+        blockExplorerUrls: ["https://robinhoodchain.blockscout.com"],
+      }],
+    });
+  }
+}
+
+export async function claimPonsNativeFees(from: string, feeEscrow: string) {
+  await switchToRobinhoodChain();
+  return String(
+    await provider().request({
+      method: "eth_sendTransaction",
+      params: [{ from, to: feeEscrow, data: "0x4e71d92d", value: "0x0" }],
+    }),
+  );
+}
+
+export async function claimPonsTokenFees(from: string, feeEscrow: string, token: string) {
+  await switchToRobinhoodChain();
+  const data = encodeFunctionData({
+    abi: ponsEscrowAbi,
+    functionName: "claimToken",
+    args: [getAddress(token)],
+  });
+  return String(
+    await provider().request({
+      method: "eth_sendTransaction",
+      params: [{ from, to: feeEscrow, data, value: "0x0" }],
+    }),
+  );
+}
+
+export async function sendNativePayout(from: string, to: string, amountEth: string) {
+  await switchToRobinhoodChain();
+  const value = parseEther(amountEth.trim());
+  if (value <= 0n) throw new Error("Enter a positive ETH amount.");
+  return String(
+    await provider().request({
+      method: "eth_sendTransaction",
+      params: [{ from, to, value: toHex(value) }],
+    }),
+  );
+}
+
+export async function sendTokenPayout(
+  from: string,
+  to: string,
+  token: string,
+  amount: string,
+  decimals: number,
+) {
+  await switchToRobinhoodChain();
+  const value = parseUnits(amount.trim(), decimals);
+  if (value <= 0n) throw new Error("Enter a positive token amount.");
+  const data = encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [getAddress(to), value],
+  });
+  return String(
+    await provider().request({
+      method: "eth_sendTransaction",
+      params: [{ from, to: token, data, value: "0x0" }],
+    }),
+  );
+}
+
+export async function waitForRobinhoodReceipt(hash: string, attempts = 45) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const response = await fetch("https://rpc.mainnet.chain.robinhood.com", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: attempt + 1,
+        method: "eth_getTransactionReceipt",
+        params: [hash],
+      }),
+    });
+    const payload = (await response.json()) as {
+      result?: { status?: string; blockNumber?: string } | null;
+    };
+    if (payload.result) {
+      if (payload.result.status !== "0x1") throw new Error("The Robinhood Chain transaction failed.");
+      return payload.result;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 1200));
+  }
+  throw new Error("The transaction is still pending. Reconcile it on the explorer before retrying.");
 }
 
 export function onWalletChange(listener: () => void) {

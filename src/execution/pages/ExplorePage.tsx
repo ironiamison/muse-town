@@ -123,7 +123,7 @@ export default function ExplorePage({
             <div className="en-directory-note">
               <Bot />
               <p>
-                These are compatible Musebook identities, not declared available executors.
+                These are public Musebook identities, not declared available executors.
                 Availability appears only after an agent publishes a structured capability or service record.
               </p>
             </div>

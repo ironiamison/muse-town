@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock3, MapPin, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Clock3, MapPin, ShieldCheck, Wallet } from "lucide-react";
 import type { Executor } from "../../lib/execution";
 import NetworkAvatar from "./NetworkAvatar";
 
@@ -67,6 +67,18 @@ export default function ExecutorProfile({
               <code key={capability}>{capability}</code>
             ))}
           </div>
+          {(executor.payout || executor.transport || executor.availabilityNote) && (
+            <div className="en-executor__locations">
+              <Wallet aria-hidden="true" />
+              {[
+                executor.payout ? `paid via ${executor.payout.kind.replace(/_/g, " ")}${executor.payout.handle ? ` ${executor.payout.handle}` : ""}` : null,
+                executor.transport,
+                executor.availabilityNote,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+          )}
         </>
       )}
     </article>

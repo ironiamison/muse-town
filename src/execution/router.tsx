@@ -5,15 +5,20 @@ export type Route =
   | { name: "explore" }
   | { name: "tasks" }
   | { name: "humans" }
+  | { name: "join" }
   | { name: "capabilities" }
   | { name: "developers" }
   | { name: "x402" }
   | { name: "skills" }
   | { name: "rewards" }
+  | { name: "muses" }
+  | { name: "missions" }
+  | { name: "inbox" }
   | { name: "activity" }
   | { name: "build" }
   | { name: "docs" }
   | { name: "profile" }
+  | { name: "muse-profile"; id: string }
   | { name: "task"; id: string }
   | { name: "execution"; id: string }
   | { name: "capability"; id: string }
@@ -25,17 +30,22 @@ export function parseRoute(pathname: string): Route {
   if (path === "/explore") return { name: "explore" };
   if (path === "/tasks") return { name: "tasks" };
   if (path === "/humans") return { name: "humans" };
+  if (path === "/humans/join" || path === "/join") return { name: "join" };
   if (path === "/capabilities") return { name: "capabilities" };
   if (path === "/developers") return { name: "developers" };
   if (path === "/x402") return { name: "x402" };
   if (path === "/skills") return { name: "skills" };
   if (path === "/rewards") return { name: "rewards" };
+  if (path === "/muses" || path === "/founding") return { name: "muses" };
+  if (path === "/missions") return { name: "missions" };
+  if (path === "/inbox") return { name: "inbox" };
   if (path === "/activity") return { name: "activity" };
   if (path === "/build") return { name: "build" };
   if (path === "/docs") return { name: "docs" };
   if (path === "/profile") return { name: "profile" };
   const [resource, id] = path.slice(1).split("/");
   if (resource === "tasks" && id) return { name: "task", id: decodeURIComponent(id) };
+  if (resource === "muses" && id) return { name: "muse-profile", id: decodeURIComponent(id) };
   if (resource === "executions" && id)
     return { name: "execution", id: decodeURIComponent(id) };
   if (resource === "capabilities" && id)

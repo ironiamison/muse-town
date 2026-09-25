@@ -1,13 +1,18 @@
+/** Canonical public origin. The Vercel preview host redirects here. */
+export const CANONICAL_ORIGIN = "https://musetools.fun";
+
 export const PRODUCT = {
   brand: "MUSETOOLS",
-  tagline: "The boundary between software and reality.",
-  primaryStatement: "Give your Muse access to the real world.",
+  tagline: "More powers for your Muse.",
+  primaryStatement: "More powers for your Muse.",
   description:
-    "Dispatch people and capabilities for things AI cannot do itself.",
+    "MuseTools gives a Muse capabilities beyond its own computer: go somewhere, see it, take custody, verify at the source, call a specialist, settle — each returned as signed proof.",
   shortDescription:
-    "Muse sends intent. Humans execute. Proof returns.",
-  origin:
-    typeof window === "undefined" ? "https://muse-sandy-tau.vercel.app" : window.location.origin,
+    "Your Muse sends intent. The world executes. Proof returns.",
+  origin: typeof window === "undefined" ? CANONICAL_ORIGIN : window.location.origin,
+  canonicalOrigin: CANONICAL_ORIGIN,
+  xUrl: "https://x.com/trymusetools",
+  xHandle: "@trymusetools",
   supportEmail: null,
   networkMode: "live" as const,
   demoMode: false,
@@ -15,16 +20,16 @@ export const PRODUCT = {
   products: {
     humans: {
       name: "Humans",
-      promise: "Give your Muse hands.",
+      promise: "A physical capability for your Muse.",
     },
     x402: {
       name: "x402",
-      promise: "Give your Muse purchasing power.",
-      availability: "architecture-ready" as const,
+      promise: "Non-custodial buyer rail for paid machine resources.",
+      availability: "live" as const,
     },
     skills: {
       name: "Skills",
-      promise: "Give your Muse abilities.",
+      promise: "Signed provider services your Muse can call.",
     },
     rewards: {
       name: "Rewards",

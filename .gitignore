@@ -6,8 +6,6 @@ dist/
 .asset-preview/
 *.local
 *.tsbuildinfo
-.env
-.env.*
 musebook-muse-contract.json
 muse-authentic-product.json
 meta-muse-official.json
@@ -18,3 +16,19 @@ musebook-primary-sources.json
 musepad-skill.json
 kintara-product.json
 kintara-mechanics.json
+musetools-creator-fees.json
+pons-v2-fee-contracts.json
+qa-musetools-*.png
+brand/
+
+# local embedded ledger (dev only)
+.data/
+
+.projects/cache
+.projects/vault
+.projects/state.test.json
+.projects/state.local.test.json
+.env
+.env.*
+!.env.example
+.env*

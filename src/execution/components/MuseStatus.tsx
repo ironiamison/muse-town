@@ -91,7 +91,7 @@ export default function MuseStatus({
           </header>
           <div className="muse-control__systems">
             <Link href="/humans"><Hand /><span><small>Humans</small><strong>{active.filter((item) => item.executorType === "human").length} active tasks</strong></span></Link>
-            <Link href="/x402"><CircleDollarSign /><span><small>x402</small><strong>{wallet ? "Payment rail connected" : "Not configured"}</strong></span></Link>
+            <Link href="/x402"><CircleDollarSign /><span><small>x402</small><strong>{wallet ? "Payment wallet connected" : "Buyer ready · wallet needed"}</strong></span></Link>
             <Link href="/skills"><Sparkles /><span><small>Skills</small><strong>{liveSkills.length} published live</strong></span></Link>
             <Link href="/rewards"><Gift /><span><small>Rewards</small><strong>{rewardAmount ? `${rewardAmount.amount} ${rewardAmount.currency}` : "No rewards issued"}</strong></span></Link>
           </div>

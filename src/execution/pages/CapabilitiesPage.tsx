@@ -1,7 +1,9 @@
 import { ArrowRight, Command, Search, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CAPABILITIES, type Capability } from "../../lib/capabilities";
+import { POWERS, continuationsFor, powerAvailability } from "../../lib/powers";
 import type { MuseSkill } from "../../lib/skills";
+import { Link } from "../router";
 
 type Primitive = {
   id: string;
@@ -97,11 +99,38 @@ export default function CapabilitiesPage({ skills }: { skills: MuseSkill[] }) {
   );
   const selected = primitives.find((item) => item.id === selectedId) ?? primitives[0];
 
+  const availability = powerAvailability(skills, false);
+
   return (
     <main className="en-page capabilities-page">
+      <section className="ms-route-hero ms-shell">
+        <div className="ms-route-hero__lead">
+          <span className="ms-eyebrow">Powers</span>
+          <h1>Six powers. One signed interface.</h1>
+          <p>
+            Every power maps to callable capabilities with an explicit proof contract. Availability is derived from signed network records, never asserted.
+          </p>
+          <div className="ms-route-hero__actions">
+            <Link href="/" className="ms-button ms-button--signal">Give your Muse a power <ArrowRight aria-hidden="true" /></Link>
+            <a href="/openapi.json" className="ms-button">OpenAPI</a>
+          </div>
+        </div>
+        <img className="ms-route-muse ms-route-muse--powers" src="/muse-corner-climber.png" alt="" aria-hidden="true" />
+        <div className="ms-route-hero__aside">
+          <ol className="ms-power-list" aria-label="Powers" data-tour="power-list">
+            {POWERS.map((power) => (
+              <li key={power.id} data-availability={availability[power.id].availability}>
+                <b>{power.id}</b>
+                <span>{power.gloss}</span>
+                <small>{availability[power.id].availability.replace("_", " ")} · {continuationsFor(power.id).length} continuations</small>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
       <section className="cap-command en-shell">
         <header>
-          <div><small>Callable primitives</small><h1>Capabilities</h1></div>
+          <div><small>Callable capabilities</small><h1>Catalog</h1></div>
           <span><Command /> K</span>
         </header>
         <label className="cap-command__search">

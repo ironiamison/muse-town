@@ -20,6 +20,7 @@ import {
 } from "../../lib/execution";
 import ExecutionFlow from "../components/ExecutionFlow";
 import NetworkAvatar from "../components/NetworkAvatar";
+import ProofCapsuleView from "../components/ProofCapsuleView";
 import ProofViewer from "../components/ProofViewer";
 import StatusIndicator from "../components/StatusIndicator";
 import { Link } from "../router";
@@ -108,7 +109,10 @@ export default function ExecutionPage({
               </div>
             </header>
             {execution.proof.length ? (
-              <ProofViewer proof={execution.proof} />
+              <>
+                <ProofViewer proof={execution.proof} />
+                <ProofCapsuleView execution={execution} task={task} />
+              </>
             ) : (
               <ol className="en-proof-requirements">
                 {execution.proofRequirements.map((proof, index) => (

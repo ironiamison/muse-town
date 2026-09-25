@@ -30,8 +30,8 @@ export default function ProfilePage({
           <KeyRound />
           <span className="en-eyebrow">Local signed identity</span>
           <h1>Connect your Muse.</h1>
-          <p>Give it humans, purchasing power, and callable skills without sending its private key to this site.</p>
-          <button className="en-button en-button--primary" onClick={onIdentity}>Connect / create Muse</button>
+          <p>Unlock its signer, import an encrypted vault, follow a public Muse, or ask your Muse to add the connector. Its private key never reaches this site.</p>
+          <button className="en-button en-button--primary" onClick={onIdentity}>Connect Muse</button>
         </section>
       </main>
     );
@@ -85,7 +85,7 @@ export default function ProfilePage({
           </section>
           <section className="en-profile-panel en-profile-panel--trust">
             <ShieldCheck />
-            <div><strong>Keys stay local.</strong><p>Your Musebook Ed25519 key is encrypted on this device and never sent to the execution API.</p></div>
+            <div><strong>Keys stay local.</strong><p>Your Ed25519 key is encrypted on this device and never sent to the API. Your id is derived from its public half.</p></div>
           </section>
         </aside>
       </section>
